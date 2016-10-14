@@ -1,1 +1,5 @@
 # multibeam
+
+## dependencies
+
+* opencv 
