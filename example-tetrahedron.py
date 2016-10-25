@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 # examples for:
 """
 Short example on the use of the multibeam module 
+for the 4-element tetrahedral array.
 """
 
 # instantiate a sonar object
@@ -12,7 +13,15 @@ tetrahedron = Sonar();
 tetrahedron.loadConfig('data/tetrahedron/tetrahedron.json')
 
 # load image
-ping = cv2.imread('data/tetrahedron/chirp_7-9.png',cv2.CV_LOAD_IMAGE_GRAYSCALE)
+ping = cv2.imread('data/tetrahedron/chirp_7-9.png', cv2.CV_LOAD_IMAGE_GRAYSCALE)
+
+# pre-process image
+ping = np.delete(ping, range(0,350), axis=0) # remove first 350 samples
+print 'ping.shape:',ping.shape
+# update the sonar config to handle the "hacked" image
+tetrahedron.max_range -= 15.0
+tetrahedron.num_bins-=350
+tetrahedron.__computeLookUp__(1)
 
 # show original image
 plt.figure()

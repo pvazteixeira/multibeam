@@ -30,8 +30,9 @@ class Sonar:
     self.num_beams = cfg['num_beams']
     self.num_bins = cfg['num_bins']
     self.psf = np.hstack(cfg['psf']) 
-    print len(self.psf)
+    # print len(self.psf)
     self.psf.shape = (1,len(self.psf))
+    self.psf/=np.sum(self.psf) # normalize
     self.noise = cfg['noise']
     self.__computeLookUp__(1.0)
 
