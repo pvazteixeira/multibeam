@@ -30,9 +30,10 @@ class Sonar:
     self.num_beams = cfg['num_beams']
     self.num_bins = cfg['num_bins']
     self.psf = np.hstack(cfg['psf']) 
-    self.psf.shape = (1,96)
+    print len(self.psf)
+    self.psf.shape = (1,len(self.psf))
     self.noise = cfg['noise']
-    self.__computeLookUp__(0.02)
+    self.__computeLookUp__(1.0)
 
   def saveConfig(self, cfg_file='sonar.json'):
     cfg={}
@@ -53,13 +54,22 @@ class Sonar:
     bin_length = (self.max_range - self.min_range)/(self.num_bins + 0.0)
     beamwidth  = (self.fov)/(self.num_beams+0.0)
 
-    y0 = self.max_range*np.sin(self.fov/2.0) 
+    i = np.arange(0, self.num_beams) 
+    alpha = beamwidth*(i+0.0)
+    x = self.max_range * np.cos(alpha)
+    x0 = np.amin(x)
+    x1 = np.amax(x)
+    y = self.max_range * np.sin(alpha) 
+    y0 = np.amax(y)
+
+    #y0 = self.max_range*np.sin(self.fov/2.0) 
     width = np.around(2*y0/resolution)
+    print width
     yres = 2*y0/width
     self.width = int(width)
     
-    x0 = self.min_range*np.cos(self.fov/2.0)
-    x1 = self.max_range
+#    x0 = self.min_range*np.cos(self.fov/2.0)
+#    x1 = self.max_range
     height = np.around((x1-x0)/resolution)
     xres = (x1-x0)/height
     self.height = int(height)
@@ -137,6 +147,9 @@ class Sonar:
     remove impulse response function from ping
     (derived from opencv's deconvolution sample)
     """
+    print ping.shape
+    print (self.num_bins, self.num_beams)
+ 
     assert ping.shape == (self.num_bins, self.num_beams)
     # convert to float, single channel
     
