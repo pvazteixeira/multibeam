@@ -13,6 +13,7 @@ dependencies:
 - decorator=4.0.10=py27_0
 - entrypoints=0.2.2=py27_0
 - enum34=1.1.6=py27_0
+- file:///home/pvt/Workspace/test-lcm::lcm=1.3.1=py27_0
 - fontconfig=2.11.1=6
 - freetype=2.5.5=1
 - functools32=3.2.3.2=py27_0
