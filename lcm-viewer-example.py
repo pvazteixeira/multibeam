@@ -39,28 +39,11 @@ def pingHandler(channel, data):
     ping+=32768.0
     ping/=65535.0
 
-    # deconvolve
-    ping_deconv = didson.deconvolve(ping)
-
-    # map back to original range
-    ping_deconv*=65535.0 
-    ping_deconv-=32768.0
-
-    ping_deconv=ping_deconv.astype(np.int16)
-    ping_deconv.shape=(msg.height*msg.width)
-
-    # create outgoing message
-    msg_out = msg 
-
-    msg_out.image = np.copy(np.asarray(ping_deconv, dtype=np.int16))
-
     # publish
-    lcm_node.publish("MULTIBEAM_PING_ENHANCED", msg_out.encode()) 
-
     img = didson.toCart(ping)
 
-    # cv2.imshow('ping',img)
-    # cv2.waitKey(1)
+    cv2.imshow('ping',img)
+    cv2.waitKey(1)
 
 if __name__ == '__main__':    
 
@@ -70,7 +53,7 @@ if __name__ == '__main__':
     didson.loadConfig('data/DIDSON/didson.json')
 
     lcm_node = lcm.LCM()
-    ping_subscription = lcm_node.subscribe("MULTIBEAM_PING",pingHandler)
+    ping_subscription = lcm_node.subscribe("MULTIBEAM_PING_ENHANCED",pingHandler)
 
     # cv2.namedWindow('ping',cv2.WINDOW_NORMAL)
     
