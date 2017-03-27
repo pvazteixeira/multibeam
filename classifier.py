@@ -9,12 +9,21 @@ functionality, and republished as a message of the original type
 (hauv_multibeam_t) on the MULTIBEAM_PING_ENHANCED channel.
 """
 
-from multibeam import Sonar
+from sonar import Sonar
 from didson import Didson
 import numpy as np
 import cv2
 import lcm
-from hauv import multibeam_ping_t
+
+# multibeam-lcmtypes
+print 'ping_t'
+import ping_t
+print 'range_t'
+import range_t
+print 'range_scan_t' 
+import range_scan_t # fails  
+
+#from hauv import multibeam_ping_t
 from bot_core import planar_lidar_t
 
 __author__     = "Pedro Vaz Teixeira"
