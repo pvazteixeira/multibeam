@@ -9,12 +9,12 @@ functionality, and republished as a message of the original type
 (hauv_multibeam_t) on the MULTIBEAM_PING_ENHANCED channel.
 """
 
-from multibeam import Sonar
+from sonar import Sonar
 from didson import Didson
 import numpy as np
 import cv2
 import lcm
-from hauv import multibeam_ping_t
+from multibeam import ping_t
 
 __author__     = "Pedro Vaz Teixeira"
 __copyright__  = ""
