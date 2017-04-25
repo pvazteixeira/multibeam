@@ -1,6 +1,6 @@
 {
   "fov": 0.50265482457436694, 
-  "max_range": 11.75, 
+  "max_range": 11.25, 
   "min_range": 2.25, 
   "noise": 0.01, 
   "num_beams": 96, 
