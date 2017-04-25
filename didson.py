@@ -1,4 +1,4 @@
-from multibeam import Sonar
+from sonar import Sonar
 import numpy as np
 import cv2
 

@@ -141,7 +141,6 @@ class Sonar:
     # convert to float, single channel
     
     ping = ping.astype(np.float64)
-    ping/=255.0
     
     # compute input ping's DFT
     img_f = cv2.dft(ping, flags = cv2.DFT_COMPLEX_OUTPUT) 
@@ -165,9 +164,8 @@ class Sonar:
 
     result = (np.max(ping)/np.max(result))*result
     result[result<0]=0
-    # remap to proper range [0, 255] and convert to uint8
-    result*=255.0
-    return result.astype(np.uint8)
+
+    return result
 
   def segment(self, ping, threshold):
     """ Segments the image using a fixed threshold
