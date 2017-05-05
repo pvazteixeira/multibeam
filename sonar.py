@@ -31,7 +31,7 @@ class Sonar:
     self.fov = cfg['fov']
     self.num_beams = cfg['num_beams']
     self.num_bins = cfg['num_bins']
-    self.psf = np.hstack(cfg['psf']) 
+    self.psf = np.array(cfg['psf']) 
     self.psf.shape = (1,96)
     self.taper = np.array(cfg['taper'])
     self.noise = cfg['noise']
@@ -44,8 +44,8 @@ class Sonar:
     cfg['fov'] = self.fov
     cfg['num_beams'] = self.num_beams
     cfg['num_bins'] = self.num_bins
-    cfg['psf'] = self.psf
-    cfg['taper'] = self.taper
+    cfg['taper'] = self.taper.tolist()
+    cfg['psf'] = np.squeeze( self.psf ).tolist()
     cfg['noise'] = self.noise
     with open(cfg_file, 'w') as fp:
       json.dump(cfg, fp, sort_keys=True, indent=2)
@@ -168,9 +168,15 @@ class Sonar:
     result = np.roll(result, -kh//2, 0)
     result = np.roll(result, -kw//2, 1)
 
-    # rescale to match original
+    result = result - result.min()
+
+    # a) rescale to match original
     result = (np.max(ping)/np.max(result))*result
-    result[result<0]=0
+    # b) normalize
+    #result = (1.0/np.max(result))*result
+    # c) clip to 0-1 range
+    # result[result<0]=0
+    # result[result>1.0] = 1.0
 
     return result
 
@@ -178,7 +184,16 @@ class Sonar:
     taper = np.tile(self.taper, (ping.shape[0],1))
     ping2 = ping.astype(np.float64)
     ping2/=taper
-    ping2*=((ping.max()+0.0)/ping2.max())
+
+    ping2 = ping2 - ping2.min()
+    ping2 = (np.max(ping)/np.max(ping2))*ping2
+    #ping2*=((ping.max()+0.0)/ping2.max())
+    # if (ping2.max()>1.0 ):
+    #   # rescale if needed
+    #   ping2*=(1.0/ping2.max())
+    # ping2[ping2<0]=0
+    # ping2[ping2>1.0] = 1.0
+
     return ping2
 
   def removeRange(self, ping):
@@ -196,7 +211,8 @@ class Sonar:
     ping2 = ping.astype(np.float64)
     ping2/=att
     # rescale to original
-    ping2*=((ping.max()+0.0)/ping2.max())
+    ping2 = ping2 - ping2.min()
+    ping2 = (np.max(ping)/np.max(ping2))*ping2
     return ping2
 
   def segment(self, ping, threshold):
