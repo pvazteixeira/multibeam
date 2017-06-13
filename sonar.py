@@ -14,7 +14,7 @@ class Sonar:
     self.psf = np.ones((1,1)) 
     self.taper = np.ones((self.num_beams))
 
-    self.noise = 0.01
+    self.noise = 0.1
 
     # look-up table used to speed up conversion from polar to cartesian
     self.row_cart =[]
