@@ -168,17 +168,17 @@ class Sonar:
     result = np.roll(result, -kh//2, 0)
     result = np.roll(result, -kw//2, 1)
 
-    result = result - result.min()
-
+    # result = result - result.min()
     # a) rescale to match original
-    result = (np.max(ping)/np.max(result))*result
+    # result = (np.max(ping)/np.max(result))*result
     # b) normalize
     #result = (1.0/np.max(result))*result
     # c) clip to 0-1 range
-    # result[result<0]=0
+    result[result<0]=0
+    result = (np.max(ping)/np.max(result))*result
     # result[result>1.0] = 1.0
 
-    return result
+    return result.astype(ping.dtype)
 
   def removeTaper(self,ping):
     taper = np.tile(self.taper, (ping.shape[0],1))
