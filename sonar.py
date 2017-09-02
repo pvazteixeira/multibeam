@@ -37,6 +37,7 @@ class Sonar:
     self.psf.shape = (1,96)
     self.taper = np.array(cfg['taper'])
     self.noise = cfg['noise']
+    self.rx_gain = cfg['rx_gain']
     self.__computeLookUp__(0.02)
 
   def saveConfig(self, cfg_file='sonar.json'):
@@ -49,6 +50,7 @@ class Sonar:
     cfg['taper'] = self.taper.tolist()
     cfg['psf'] = np.squeeze( self.psf ).tolist()
     cfg['noise'] = self.noise
+    cfg['rx_gain'] = self.rx_gain
     with open(cfg_file, 'w') as fp:
       json.dump(cfg, fp, sort_keys=True, indent=2)
 
@@ -57,7 +59,7 @@ class Sonar:
     print('FOV:',self.fov)
     print('Beams:',self.num_beams)
     print('Bins:',self.num_bins)
-    print('SNR:',self.noise)
+    print('NSR:',self.noise)
     print('Rx gain:',self.rx_gain)
 
   def __computeLookUp__(self, resolution):
