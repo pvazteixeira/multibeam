@@ -90,3 +90,8 @@ ENV/
 
 # Output/test data
 ping.png
+
+# exported figures
+dev/*.eps
+dev/*.pdf
+dev/*.png

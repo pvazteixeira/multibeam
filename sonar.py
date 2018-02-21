@@ -80,8 +80,8 @@ class Sonar:
     xres = (x1-x0)/height
     self.height = int(height)
     
-    print 'Resolution'
-    print 'Desired:',resolution,', x:',xres,', y:',yres
+    # print 'Resolution'
+    # print 'Desired:',resolution,', x:',xres,', y:',yres
 
     row_cart = np.arange(0,height)
     row_cart.shape = (height,1)
