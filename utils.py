@@ -10,51 +10,97 @@ object pmf :     rayleigh.pdf(x,0,s)
 note: normalization missing from the above equations
 """
 
-def background_pmf(x, pi, s):
-    p0 = np.zeros_like(x) # zero-bias
-    p0[0]=1
+def kld(sample, reference):
+    p = sample
+    q = reference
+    q[np.where(q==0)[0]] = 1 # we're dividing by q, so set all zero-values to 1
+    r = p/q
+    r[np.where(r==0)[0]] = 1 # ln(1) = 0; ln(0)=nan
 
-    p1 = expon.pdf(x,0,s) # background
-    p1/=np.sum(p1)        # normalize
+    return np.sum(p*np.log(r)) 
 
-    p = (1-pi)*p0 + pi*p1 # mixture
-    p/=np.sum(p)          # normalize (unnecessary)
+def background_pmf(x, pi, s, L=2**8):
+    """
+    background_pmf
+    """
+    p = expon.pdf(x,0,s) # background
+    p /= np.sum(expon.pdf(np.linspace(0,1,L),0,s))        # normalize
+    p[x==0] += (1-pi)
+
     return p
 
-def object_pmf(x, s):
+def object_pmf(x, s, L=2**8):
+    """
+    object_pmf
+    """
     p = rayleigh.pdf(x,0,s)
-    p/=np.sum(p)
+    p/=np.sum(rayleigh.pdf(np.linspace(0,1,L),0,s))
     return p
 
-def mixture_pmf(x, pi1, pi2, s1, s2):
+def mixture_pmf(x, pi1, pi2, s1, s2, L=2**8):
     """
     (1-pi1-pi2)*delta(x) + pi1*exponential(x,s1) + pi2*rayleigh(x,s2)
     """
-    p0 = np.zeros_like(x) # zero-bias
-    p0[0]=1
-
+    # background
     p1 = expon.pdf(x,0,s1) # background
-    p1/=np.sum(p1)        # normalize
+    p1 /= np.sum(expon.pdf(np.linspace(0,1,L, endpoint=False),0,s1))
 
-    p2 = rayleigh.pdf(x, 0, s2)
-    p2/=np.sum(p2)
+    # object
+    p2 = rayleigh.pdf(x,0,s2)
+    p2 /= np.sum(rayleigh.pdf(np.linspace(0,1,L, endpoint=False),0,s2))
 
-    p = (1-pi1-pi2)*p0 + pi1*p1 + pi2*p2
-    p/=np.sum(p)
+    print 'expon:', np.sum(p1), 'rayleigh:', np.sum(p2)
+
+    # mixture
+    p = pi1*p1 + pi2*p2
+    p[x<(1.0/L)] += (1 - pi1 - pi2) # zero-bias
 
     return p
 
-def likelihood(x, pi1, pi2, s1, s2):
+def getMixtureParameters(ping,L=2**8):
+    """ Computes the mixture model parameters.
+
+    Keyword arguments
+    ping - the sonar image (0-1 range)
+
+    Output
+    (pi1, pi2, p1, s2)
+
+    """
+    bins = np.linspace(0, 1.0, L+1 )
+    hi = np.histogram(ping.flatten(),bins)
+
+    x = hi[1][:-1].astype(np.float64)
+    h = hi[0][:].astype(np.float64)
+    h /=(0.0+np.sum(h))
+
+    p, v = curve_fit(mixture_pmf, x, h, p0=[0.3, 0.02, 0.02, 0.15],bounds=([0,0,0.0,0],[0.5,0.5,1.0,1.0]))
+
+    mix = mixture_pmf(x, p[0],p[1],p[2],p[3])
+
+    k = kld(h,mix)
+
+    return (p,k)
+
+def likelihood(x, pi1, pi2, s1, s2, L=2**8):
     pi0 = ( 1 - pi1 - pi2 )
     pi0 /= (1-pi2)
 
     num = rayleigh.pdf(x,0,s2)
     den = (1-pi0)*expon.pdf(x,0,s1)
-    den[x==0]+=pi0
+    den[x<1.0/L]+=pi0
 
     l = num/den
 
     return l
+
+
+def segment_np(x,pi1,pi2,s1,s2, p_fa):
+    """
+
+    """
+
+    return s
 
 
 def segment_map(x,pi1,pi2,s1,s2):
@@ -64,7 +110,6 @@ def segment_map(x,pi1,pi2,s1,s2):
     eta = (1-pi2)/pi2
 
     s = likelihood(x, pi1,pi2,s1,s2)
-
     s[s<eta] = 0
     s[s>=eta] = 1.0
 
@@ -75,25 +120,5 @@ def segment_mrf(x,pi1, pi2, s1, s2):
     MRF segmentation
     """
     s = np.zeros_like(x)
-    return s
 
-def getMixtureParameters(ping):
-    """ Computes the mixture model parameters.
 
-    Keyword arguments
-    ping - the sonar image (0-1 range)
-
-    Output
-    (pi1, pi2, p1, s2)
-
-    """
-    bins = np.linspace(0, 1.0, 256 )
-    hi = np.histogram(ping.flatten(),bins)
-
-    x = hi[1][:-1].astype(np.float64)
-    h = hi[0][:].astype(np.float64)
-    h /=(0.0+np.sum(h))
-
-    p, v = curve_fit(mixture_pmf, x, h, p0=[0.3, 0.02, 0.02, 0.15],bounds=([0,0,0.0,0],[0.5,0.5,1.0,1.0]))
-
-    return p
