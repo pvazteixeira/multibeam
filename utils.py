@@ -83,7 +83,8 @@ def getMixtureParameters(ping,L=2**8):
     h /=(0.0+np.sum(h))
 
     # curve_fit(fcn, xdata, ydata, params)
-    p, v = curve_fit(mixture_pmf, x, h, p0=[0.3, 0.02, 0.02, 0.15],bounds=([0,0,0.0,0],[0.5,0.5,1.0,1.0]))
+    # p, v = curve_fit(mixture_pmf, x, h, p0=[0.3, 0.02, 0.02, 0.15], bounds=([0,0,0.0,0],[0.5,0.5,1.0,1.0]))
+    p, v = curve_fit(mixture_pmf, x, h, p0=[0.3, 0.02, 0.02, 0.15])
 
     mix = mixture_pmf(x, p[0],p[1],p[2],p[3])
 
@@ -133,5 +134,37 @@ def segment_mrf(x,pi1, pi2, s1, s2):
     MRF segmentation
     """
     s = np.zeros_like(x)
+    # NOT IMPLEMENTED 
+    return s
 
 
+def extract_max(ping, ping_binary, min_range, bin_length):
+    """
+    Extract the strongest return (per-beam) from a segmented image.
+    """
+    pping = np.copy(ping)
+    pping[ping_binary<=0] = 0;
+    intensities = np.amax(pping, axis=0)
+    ranges = np.argmax(pping, axis=0)
+    ranges = ranges*bin_length
+    ranges[ranges<=0] = -min_range;
+    ranges += min_range*(np.ones_like(ranges))
+
+    return (ranges, intensities)
+
+
+def extract_first(x, b, min_range, bin_length):
+    """
+    Extract the first return (per-beam) from a segmented image.
+    UNIMPLEMENTED
+    """
+
+    ping = np.copy(x)
+    ping[b<=0] = 0;
+    intensities = np.amax(ping, axis=0)
+    ranges = np.argmax(ping, axis=0)
+    ranges = ranges*bin_length
+    ranges[ranges<=0] = -min_range;
+    ranges += min_range(np.ones_like(ranges))
+
+    return (ranges, intensities)
