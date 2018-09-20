@@ -1,4 +1,4 @@
-from multibeam import Sonar
+from sonar import Sonar
 import numpy as np
 import cv2
 
@@ -12,18 +12,18 @@ class Didson(Sonar):
         beamwidth  = (self.fov)/(self.num_beams+0.0)
         
         y0 = self.max_range*np.sin(self.fov/2.0) 
-        width = np.around(2*y0/resolution)
+        width = int(np.around(2*y0/resolution))
         yres = 2*y0/width
-        self.width = int(width)
+        self.width = width
         
         x0 = self.min_range*np.cos(self.fov/2.0)
         x1 = self.max_range
-        height = np.around((x1-x0)/resolution)
+        height = int(np.around((x1-x0)/resolution))
         xres = (x1-x0)/height
-        self.height = int(height)
+        self.height = height
         
-        print 'Resolution'
-        print 'Desired:',resolution,', x:',xres,', y:',yres
+        # print 'Resolution'
+        # print 'Desired:',resolution,', x:',xres,', y:',yres
 
         row_cart = np.arange(0,height)
         row_cart.shape = (height,1)
