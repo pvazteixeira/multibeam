@@ -4,7 +4,7 @@ import cv2
 
 class Didson(Sonar):
 
-    def __computeLookUp__(self, resolution):
+    def __compute_lookup__(self, resolution):
         """Compute lookup table used in polar to cartesian conversion
 
         """
