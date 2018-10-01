@@ -38,7 +38,6 @@ class Sonar(object):
         self.fov = np.deg2rad(90.0)
         self.num_beams = 128
 
-
         self.num_bins = 512
         self.psf = np.ones((1, 1))
         self.taper = np.ones((self.num_beams))
@@ -90,6 +89,10 @@ class Sonar(object):
                     self.psf = np.array(cfg['psf'])
                     self.psf.shape = (1, self.num_beams)
 
+            if 'taper' in cfg:
+                if cfg['taper'] != 1:
+                    self.taper = np.array(cfg['taper'])
+
             if 'azimuths' in cfg:
                 azimuths = np.array(cfg['azimuths'])
                 self.__update_azimuths__(azimuths)
@@ -106,15 +109,17 @@ class Sonar(object):
     def save_config(self, cfg_file='sonar.json'):
         """Save the ping/sonar parameters to a JSON file."""
         cfg = {}
-        cfg['min_range'] = self.min_range
-        cfg['max_range'] = self.max_range
         cfg['fov'] = self.fov
+        cfg['max_range'] = self.max_range
+        cfg['min_range'] = self.min_range
         cfg['num_beams'] = self.num_beams
         cfg['num_bins'] = self.num_bins
-        cfg['taper'] = self.taper.tolist()
-        cfg['psf'] = np.squeeze(self.psf).tolist()
         cfg['noise'] = self.noise
         cfg['rx_gain'] = self.rx_gain
+
+        cfg['psf'] = np.squeeze(self.psf).tolist()
+        cfg['azimuths'] = self.azimuths.tolist()
+        cfg['taper'] = self.taper.tolist()
         with open(cfg_file, 'w') as fp:
             json.dump(cfg, fp, sort_keys=True, indent=2)
 
@@ -130,6 +135,8 @@ class Sonar(object):
         """Update the interpolating functions that compute the mapping between azimuth and beam from a table."""
         assert len(azimuths) == self.num_beams
         self.azimuths = azimuths
+        # update FOV
+        self.fov = np.amax(azimuths) - np.amin(azimuths)
         # update maps
         self.k_b2a = np.polyfit(np.arange(0, self.num_beams), azimuths, 5)
         self.p_beam2azi = np.poly1d(self.k_b2a)
