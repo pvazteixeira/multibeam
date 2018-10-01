@@ -109,15 +109,15 @@ def likelihood(x, pi1, pi2, s1, s2, L=2**8):
     return l
 
 
-def segment_np(x,pi1,pi2,s1,s2, p_fa):
+def segment_np(x,pi1,pi2,s1,s2, p_fa=1e-3):
     """
-
+    Neyman-Pearson segmentation.
     """
 
     return s
 
 
-def segment_map(x,pi1,pi2,s1,s2):
+def segment_map(x, pi1, pi2, s1, s2):
     """
     MAP segmentation (binary local classifier)
     """
@@ -128,6 +128,19 @@ def segment_map(x,pi1,pi2,s1,s2):
     s[s>=eta] = 1.0
 
     return s
+
+def segment_map(ping):
+    """
+    MAP segmentation of a sonar scan.
+    """
+    # 1) extract model parameters
+    p, k = getMixtureParameters(ping)
+
+    # 2) segment
+    s = segment_map(ping, p[0], p[1], p[2], p[3])
+
+    return s
+
 
 def segment_mrf(x,pi1, pi2, s1, s2):
     """
@@ -143,11 +156,11 @@ def extract_max(ping, ping_binary, min_range, bin_length):
     Extract the strongest return (per-beam) from a segmented image.
     """
     pping = np.copy(ping)
-    pping[ping_binary<=0] = 0;
+    pping[ping_binary <= 0] = 0;
     intensities = np.amax(pping, axis=0)
     ranges = np.argmax(pping, axis=0)
     ranges = ranges*bin_length
-    ranges[ranges<=0] = -min_range;
+    ranges[ranges <= 0] = -min_range;
     ranges += min_range*(np.ones_like(ranges))
 
     return (ranges, intensities)
@@ -160,11 +173,22 @@ def extract_first(x, b, min_range, bin_length):
     """
 
     ping = np.copy(x)
-    ping[b<=0] = 0;
+    ping[b <= 0] = 0;
     intensities = np.amax(ping, axis=0)
     ranges = np.argmax(ping, axis=0)
     ranges = ranges*bin_length
-    ranges[ranges<=0] = -min_range;
+    ranges[ranges <= 0] = -min_range;
     ranges += min_range(np.ones_like(ranges))
 
     return (ranges, intensities)
+
+
+def remove_percentile(ping, percentile=99.0):
+    """
+    Set all pixels below the specified quantile to 0.
+    """
+    ping2 = np.copy(ping)
+    p_th = np.percentile(ping[:], percentile)
+    ping2[ping2 < p_th] = 0.0
+    return(ping2)
+
