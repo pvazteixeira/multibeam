@@ -178,15 +178,15 @@ class Sonar(object):
 
         #y0 = -self.max_range*np.sin(self.fov/2.0)
         y1 = self.max_range*np.sin(self.fov/2.0)
-        width = np.around(2*y1/resolution)
-        yres = 2*y1/width  # resolution on y-axis, in m/px
-        self.width = int(width)
+        width = int(np.around(2*y1/resolution))
+        yres = 2*y1/(width+0.0)  # resolution on y-axis, in m/px
+        self.width = width
 
         x0 = self.min_range*np.cos(self.fov/2.0)
         x1 = self.max_range
-        height = np.around((x1-x0)/resolution)
-        xres = (x1-x0)/height+0.0
-        self.height = int(height)
+        height = int(np.around((x1-x0)/resolution))
+        xres = (x1-x0)/(height+0.0)
+        self.height = height
 
         logging.debug("Resolution: req=%f, x=%f, y=%f", resolution, xres, yres)
 
@@ -270,6 +270,11 @@ class Sonar(object):
         0.02 m/px    2ms
         0.03 m/px    1ms
         """
+        assert np.amin(self.row_polar) == 0
+        assert np.amax(self.row_polar) == self.num_bins-1
+        assert np.amin(self.col_polar) == 0
+        assert np.amax(self.col_polar) == self.num_beams-1
+
         image = np.zeros((self.height, self.width))
         ping[0, 0] = background
         image[self.row_cart.flatten(), self.col_cart.flatten()] = ping[self.row_polar.flatten(), self.col_polar.flatten()]
