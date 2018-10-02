@@ -1,14 +1,16 @@
 # multibeam
 
-A Python module to handle multibeam images.
+A simple Python module to handle multibeam sonar images.
 
-## dependencies
+## getting started
 
-Required:
-* json - used to store sonar configurations
-* numpy - general-purpose array manipulation
-* opencv - image processing  
+The key functionalities in this library are demonstrated in the notebook `examples/demo.ipynb`
 
-Optional:
-* lcm - required by `lcm-example.py` (the `hauv_multibeam_ping_t` lcm type will
-  also be necessary - its python binding must be in the python path)
+## contribute
+Contributions are very welcome - feel free to create issues or open pull requests.
+
+## references
+
+ * P.V. Teixeira, M. Kaess, F. Hover, J. Leonard "Multibeam Data Processing for Underwater Mapping" 2018 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)
+
+
