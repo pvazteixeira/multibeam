@@ -138,6 +138,12 @@ class Sonar(object):
         """Return the beam number corresponding to the specified azimuth angle (in radians)."""
         return int(np.round(self.p_azi2beam(azimuth)))
 
+    def init(self):
+        """initialize object"""
+        if len(self.azimuths) < 2:
+            azis = np.linspace(-self.fov/2.0, self.fov/2.0, self.num_beams)
+            self.__update_azimuths__(azis)
+        self.__compute_lookup__((self.max_range-self.min_range)/(self.num_bins+0.0))
     def __update_azimuths__(self, azimuths):
         """Update the interpolating functions that compute the mapping between azimuth and beam from a table."""
         assert len(azimuths) == self.num_beams
