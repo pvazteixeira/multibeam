@@ -106,7 +106,7 @@ class Sonar(object):
             delta_r = (self.max_range-self.min_range)/(self.num_bins+0.0)
             self.__compute_lookup__(delta_r)
 
-    def save_config(self, cfg_file='sonar.json'):
+    def save_config(self, cfg_file='sonar.json', ap={}):
         """Save the ping/sonar parameters to a JSON file."""
         cfg = {}
         cfg['fov'] = self.fov
@@ -117,11 +117,18 @@ class Sonar(object):
         cfg['noise'] = self.noise
         cfg['rx_gain'] = self.rx_gain
 
+
         cfg['psf'] = np.squeeze(self.psf).tolist()
         cfg['azimuths'] = self.azimuths.tolist()
         cfg['taper'] = self.taper.tolist()
-        with open(cfg_file, 'w') as fp:
-            json.dump(cfg, fp, sort_keys=True, indent=2)
+
+        # store additional parameters
+        if ap:
+            for key in ap.keys():
+                cfg[key] = ap[key]
+
+        with open(cfg_file, 'w') as fptr:
+            json.dump(cfg, fptr, sort_keys=True, indent=2)
 
     def azimuth(self, beam):
         """Returns the azimuth angle (in radians) corresponding to the specified beam number."""
