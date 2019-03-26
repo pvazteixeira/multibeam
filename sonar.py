@@ -308,7 +308,6 @@ class Sonar(object):
 ## revise below! ##
 ###################
 
-'''
 
 def removeTaper(self,ping):
     taper = np.tile(self.taper, (ping.shape[0],1))
@@ -325,6 +324,7 @@ def removeTaper(self,ping):
     # ping2[ping2>1.0] = 1.0
 
     return ping2
+'''
 
 def removeRange(self, ping):
     # this function captures absorption and geometrical spreading
