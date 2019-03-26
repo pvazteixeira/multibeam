@@ -177,6 +177,16 @@ def segment_map(x, pi1, pi2, s_1, s_2):
 
     return s
 
+def segment_ping_threshold(ping, threshold=0.5):
+    """
+    Fixed-threshold segmentation.
+    """
+    ping_seg = np.copy(ping)
+    ping_seg[ping_seg < threshold] = 0.0
+    ping_seg[ping_seg >= threshold] = 1.0
+
+    return ping_seg
+
 def segment_ping_map(ping):
     """
     MAP segmentation of a sonar scan.
