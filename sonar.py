@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Sonar
+"""
+sonar.py
 
-This module ...
+This module conains a set of useful routines to handle multibeam profiling sonar data processing.
+
+See also: teixeira2018multibeam.
 """
 
 import json
@@ -10,13 +13,16 @@ import numpy as np
 
 import cv2
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+from skimage.io import imread, imsave
+
+
+# logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Sonar(object):
     # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
-    """A class to handle pre-processing of multibeam sonar data.
-
+    """
+    A class to handle pre-processing of multibeam sonar data.
 
     Pings are assumed to be R rows by B columns, corresponding to the data in
     polar coordinates, where the first row is closest to the sonar, and azimuth
@@ -304,26 +310,42 @@ class Sonar(object):
         # result[result>1.0] = 1.0
         return result.astype(ping.dtype)
 
+    def removeTaper(self, ping):
+        """
+        Remove taper effects from a scan.
+        """
+        # TODO: revise!
+        taper = np.tile(self.taper, (ping.shape[0], 1))
+        ping2 = ping.astype(np.float64)
+        ping2 /= taper
+
+        ping2 = ping2 - ping2.min()
+        ping2 = (np.max(ping)/np.max(ping2))*ping2
+        #ping2*=((ping.max()+0.0)/ping2.max())
+        # if (ping2.max()>1.0 ):
+        #   # rescale if needed
+        #   ping2*=(1.0/ping2.max())
+        # ping2[ping2<0]=0
+        # ping2[ping2>1.0] = 1.0
+
+        return ping2
+
+    def preprocess(self, ping):
+        """
+        Pre-process a ping. This entails removing beam-pattern effects, angular taper, and
+        attenuation.
+        """
+        ping2 = np.copy(ping)
+        # deconvolve
+
+        return ping2
+
+
 ###################
 ## revise below! ##
 ###################
 
 
-def removeTaper(self,ping):
-    taper = np.tile(self.taper, (ping.shape[0],1))
-    ping2 = ping.astype(np.float64)
-    ping2 /= taper
-
-    ping2 = ping2 - ping2.min()
-    ping2 = (np.max(ping)/np.max(ping2))*ping2
-    #ping2*=((ping.max()+0.0)/ping2.max())
-    # if (ping2.max()>1.0 ):
-    #   # rescale if needed
-    #   ping2*=(1.0/ping2.max())
-    # ping2[ping2<0]=0
-    # ping2[ping2>1.0] = 1.0
-
-    return ping2
 '''
 
 def removeRange(self, ping):

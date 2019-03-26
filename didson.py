@@ -3,7 +3,7 @@ Specialization of multibeam.sonar to handle DIDSON sonars.
 """
 import numpy as np
 import cv2
-from multibeam.sonar import Sonar
+from sonar import Sonar
 
 class Didson(Sonar):
     """
