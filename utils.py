@@ -3,14 +3,15 @@ Useful functions for sonar segmentation.
 
 See also: teixeira2018multibeam (IROS 2018)
 """
+from __future__ import division # integer division now yields floating-point numbers
+
 import numpy as np
 
-from scipy.optimize import curve_fit
-from scipy.stats import entropy, expon, rayleigh
+from scipy.optimize import curve_fit, minimize
+from scipy.stats import entropy, expon, norm, rayleigh, rice
 
 from skimage.io import imread
 
-from __future__ import division # integer division now yields floating-point numbers
 
 
 
@@ -87,6 +88,16 @@ def ray_pmf(x, shape, levels=2**8):
 
     return prob
 
+def norm_pmf(x, loc, scale, levels=2**8):
+    """
+    Evaluate the object probability mass function
+    """
+
+    prob = norm.pdf(x, loc, scale)
+    prob /= np.sum(norm.pdf(np.linspace(0, 1, levels), loc, scale))
+
+    return prob
+
 def object_pmf(x, shape, levels=2**8):
     """
     Evaluate the object probability mass function
@@ -95,8 +106,6 @@ def object_pmf(x, shape, levels=2**8):
     shape - the shape of the pmf
     levels - the size of the discrete interval (default: 256)
     """
-
-
     return ray_pmf(x, shape, levels)
 
 
@@ -163,7 +172,36 @@ def mixture_pmf(x, pi_bg, pi_obj, s_bg, s_obj, levels=2**8):
 
 #     return mixture_pmf(x, pi_bg, pi_obj, 0.04, 0.3, 0.01, levels=levels)
 
-def get_mixture_parameters(ping, p0=[0.3, 0.020, 0.3, 0.01],  levels=2**8):
+def obj_fcn(theta, y, p_y):
+    p_mix = mixture_pmf(y, theta[0],theta[1],theta[2],theta[3])
+    return entropy(p_y, p_mix)
+
+def get_mixture(y, theta0=[0.3, 0.01, 0.03, 0.2], levels=2**8):
+    """
+    Estimate mixture model parameters through least squares.
+    """
+
+    theta = np.copy(theta0)
+    samples = np.copy(y.flatten())
+
+    bins = np.linspace(0, 1.0, levels+1)
+    # k = np.linspace(0, 1.0, levels)
+
+    hist = np.histogram(samples, bins)
+    yv = hist[1][:-1].astype(np.float64)
+    p_emp = hist[0][:].astype(np.float64)
+    p_emp /= (np.sum(p_emp))
+
+    result = minimize(obj_fcn, theta0,( yv, p_emp))
+    theta = result.x
+
+    p_mix = mixture_pmf(yv, theta[0], theta[1], theta[2], theta[3])
+
+    div = entropy(p_emp, p_mix)
+
+    return p_emp, p_mix, theta, div
+
+def get_mixture_parameters(ping, p0=[0.32, 0.01, 0.03, 0.2],  levels=2**8):
     """
     Computes the mixture model parameters.
 
@@ -177,18 +215,18 @@ def get_mixture_parameters(ping, p0=[0.3, 0.020, 0.3, 0.01],  levels=2**8):
     hist = np.histogram(ping.flatten(), bins)
 
     x_vals = hist[1][:-1].astype(np.float64)
-    p_vals = hist[0][:].astype(np.float64)
-    p_vals /= (0.0+np.sum(p_vals))
+    p_emp = hist[0][:].astype(np.float64)
+    p_emp /= (0.0+np.sum(p_emp))
 
     # curve_fit(fcn, xdata, ydata, params)
-    # params, _ = curve_fit(mixture_pmf, x_vals, p_vals, p0=[0.3, 0.02, 0.02, 0.15])
-    params, _ = curve_fit(mixture_pmf, x_vals, p_vals, p0=p0)#, bounds=([0.2, 0.0, 0.01, 1e-2 ],[ 0.9, 0.1, 0.1, 1e0 ]))
+    # params, _ = curve_fit(mixture_pmf, x_vals, p_emp, p0=[0.3, 0.02, 0.02, 0.15])
+    params, _ = curve_fit(mixture_pmf, x_vals, p_emp, p0=p0, bounds=([0.2, 0.0, 0.01, 1e-2 ], [ 0.5, 0.1, 0.05, 1e0 ]))
 
     # TODO: check parameter sanity!
 
     mix = mixture_pmf(x_vals, params[0], params[1], params[2], params[3])
 
-    k = entropy(p_vals, mix)
+    k = entropy(p_emp, mix)
 
     return (params, k)
 
@@ -276,12 +314,16 @@ def compute_roc(pi1, pi2, s1, s2, levels=2**8):
     """
     """
     k = np.linspace(0, 1.0, levels)
+
     b_pmf = background_pmf(k, pi1, s1, levels)
-    p_fa = 1.0 - np.cumsum(b_pmf)
+    p_fa = 1.0 - np.cumsum(b_pmf) # = Sf0(y)
 
     o_pmf = object_pmf(k, s2, levels)
-    p_d = 1.0 - np.cumsum(o_pmf)
+    p_d = 1.0 - np.cumsum(o_pmf)  # = Sf1(y)
 
+    # flip order and add 1.0 to the end so it is easier to plot
+    p_fa = np.append(p_fa[::-1], 1.0)
+    p_d = np.append(p_d[::-1], 1.0)
     auc = np.trapz(p_d, p_fa)
 
     return(p_fa, p_d, auc)
@@ -397,6 +439,7 @@ def remove_percentile(ping, percentile=99.0):
 def em(y, theta0, epsilon=1e-2, max_iter = 100, levels=2**8):
     """
     estimate mixture model parameters via the EM algorithm
+    Assumes an exponential+rayleigh mixture with a zero-bias.
     """
     theta = np.copy(theta0)
     samples = np.copy(y.flatten())
