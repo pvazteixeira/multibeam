@@ -37,7 +37,9 @@ class Sonar(object):
     """
 
     def __init__(self):
-        """Initializes a sonar object with reasonable values."""
+        """
+        Initializes a sonar object with reasonable values.
+        """
         self.min_range = 1.0
         self.max_range = 10.0
         self.fov = np.deg2rad(90.0)
@@ -48,7 +50,14 @@ class Sonar(object):
         self.taper = np.ones((self.num_beams))
 
         self.noise = 0.1
-        self.rx_gain = 0 # currently unused, but important to record
+        self.rx_gain = 0.0 # currently unused, but important to record
+
+        # assume linear mapping between beam and azimuth angle
+        self.azimuths = []
+        self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
+        self.p_beam2azi = np.poly1d(self.k_b2a)
+        self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
+        self.p_azi2beam = np.poly1d(self.k_a2b)
 
         # look-up table used to speed up conversion from polar to cartesian, e.g.:
         # cart_img[row_cart,col_cart] = polar_img[row_polar, cart_polar]
@@ -56,14 +65,6 @@ class Sonar(object):
         self.col_cart = []
         self.row_polar = []
         self.col_polar = []
-
-        self.azimuths = []
-
-        # assume linear mapping
-        self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
-        self.p_beam2azi = np.poly1d(self.k_b2a)
-        self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
-        self.p_azi2beam = np.poly1d(self.k_a2b)
 
         self.__compute_lookup__(0.01)
 
@@ -103,13 +104,14 @@ class Sonar(object):
                 azimuths = np.array(cfg['azimuths'])
                 self.__update_azimuths__(azimuths)
             else:
-                # we update the linear mapping defined at initialization.
+                # we update the LINEAR mapping defined at initialization with the new parameters
                 self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
                 self.p_beam2azi = np.poly1d(self.k_b2a)
                 self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
                 self.p_azi2beam = np.poly1d(self.k_a2b)
 
             delta_r = (self.max_range-self.min_range)/(self.num_bins+0.0)
+            delta_r = min(delta_r, self.min_range*self.fov/(self.num_beams))
             self.__compute_lookup__(delta_r)
 
     def save_config(self, cfg_file='sonar.json'):
@@ -117,9 +119,9 @@ class Sonar(object):
         Save the ping/sonar parameters to a JSON file.
         """
         cfg = {}
-        cfg['fov'] = self.fov
         cfg['max_range'] = self.max_range
         cfg['min_range'] = self.min_range
+        cfg['fov'] = self.fov
         cfg['num_beams'] = self.num_beams
         cfg['num_bins'] = self.num_bins
         cfg['noise'] = self.noise
@@ -128,6 +130,7 @@ class Sonar(object):
         cfg['psf'] = np.squeeze(self.psf).tolist()
         cfg['azimuths'] = self.azimuths.tolist()
         cfg['taper'] = self.taper.tolist()
+
         with open(cfg_file, 'w') as fp:
             json.dump(cfg, fp, sort_keys=True, indent=2)
 
@@ -189,8 +192,10 @@ class Sonar(object):
         self.k_a2b = np.polyfit(azimuths, np.arange(0, self.num_beams)+0.0, 5)
         self.p_azi2beam = np.poly1d(self.k_a2b)
 
-    def __compute_lookup__(self, resolution):
-        """Compute lookup table used in polar to cartesian conversion"""
+    def __compute_lookup__(self, resolution=0.01):
+        """
+        Compute lookup table used in polar to cartesian conversion
+        """
         # This function computes a look-up table of pairs (i,j), (k,l) to enable
         # fast conversion from polar to cartesian via vectorization of
         # ping_cart[i, j] = ping_polar[k, l]
@@ -281,7 +286,7 @@ class Sonar(object):
         self.row_cart = row_cart.astype(int)
         self.col_cart = col_cart.astype(int)
 
-    def reset_window(self, min_range, max_range, resolution=0.02):
+    def reset_window(self, min_range, max_range, resolution=0.01):
         """Reset the sonar window and recompute lookup table."""
         self.min_range = min_range
         self.max_range = max_range
@@ -296,6 +301,7 @@ class Sonar(object):
         Keyword arguments:
         ping - the sonar scan, in polar representation
         width - the desired with of the Cartesian representation (default: 320)
+
         Note: some conversion performance values as a function of resolution:
         Sample results for 96 beams * 512 bins, 28.8deg FOV, 2.25-11.25m
         resolution | conversion time
