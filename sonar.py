@@ -228,14 +228,14 @@ class Sonar(object):
 
         logging.debug("Resolution: req=%f, x=%f, y=%f", resolution, xres, yres)
 
-        row_cart = np.arange(0, height)
-        row_cart.shape = (height, 1)
-        row_cart = np.tile(row_cart, (1, width))
+        row_cart = np.arange(0, self.height)
+        row_cart.shape = (self.height, 1)
+        row_cart = np.tile(row_cart, (1, self.width))
         x = x0 + xres*row_cart
 
-        col_cart = np.arange(0, width)
-        col_cart.shape = (1, width)
-        col_cart = np.tile(col_cart, (height, 1))
+        col_cart = np.arange(0, self.width)
+        col_cart.shape = (1, self.width)
+        col_cart = np.tile(col_cart, (self.height, 1))
         y = -y1 + yres*col_cart
 
         # convert to range, azi
@@ -245,11 +245,11 @@ class Sonar(object):
         angle[angle > np.pi] -= 2*np.pi
         angle[angle < -np.pi] += 2*np.pi
 
-        mag.shape = (height, width)
-        angle.shape = (height, width)
+        mag.shape = (self.height, self.width)
+        angle.shape = (self.height, self.width)
 
         col_polar = self.p_azi2beam(angle)
-        col_polar.shape = (height, width)
+        col_polar.shape = (self.height, self.width)
 
         row_polar = mag
         row_polar -= self.min_range
