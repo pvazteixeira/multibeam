@@ -4,7 +4,7 @@ sonar.py
 
 This module conains a set of useful routines to handle multibeam profiling sonar data processing.
 
-See also: teixeira2018multibeam.
+See also: [teixeira2018multibeam].
 """
 
 import json
@@ -14,7 +14,6 @@ import numpy as np
 import cv2
 
 from skimage.io import imread, imsave
-
 
 # logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -49,9 +48,10 @@ class Sonar(object):
         self.taper = np.ones((self.num_beams))
 
         self.noise = 0.1
-        self.rx_gain = 0 # currently unused
+        self.rx_gain = 0 # currently unused, but important to record
 
-        # look-up table used to speed up conversion from polar to cartesian
+        # look-up table used to speed up conversion from polar to cartesian, e.g.:
+        # cart_img[row_cart,col_cart] = polar_img[row_polar, cart_polar]
         self.row_cart = []
         self.col_cart = []
         self.row_polar = []
@@ -113,7 +113,9 @@ class Sonar(object):
             self.__compute_lookup__(delta_r)
 
     def save_config(self, cfg_file='sonar.json'):
-        """Save the ping/sonar parameters to a JSON file."""
+        """
+        Save the ping/sonar parameters to a JSON file.
+        """
         cfg = {}
         cfg['fov'] = self.fov
         cfg['max_range'] = self.max_range
@@ -129,8 +131,46 @@ class Sonar(object):
         with open(cfg_file, 'w') as fp:
             json.dump(cfg, fp, sort_keys=True, indent=2)
 
+    def to_csv_polar(self, filename, ping):
+        """
+        Export the ping as a csv file.
+        """
+        data = np.zeros((self.num_beams*self.num_bins, 3))
+        for beam in range(0, self.num_beams):
+            for rbin in range(0, self.num_bins):
+                row_idx = beam*self.num_bins + rbin
+                data[row_idx, 0] = self.range(rbin)
+                data[row_idx, 1] = self.azimuth(beam)
+                data[row_idx, 2] = ping[rbin, beam]
+        np.savetxt(filename, data, delimiter=',', newline='\n')
+
+    def to_csv_cart(self, filename, ping):
+        """
+        Export the ping as a csv file.
+        """
+        data = np.zeros((self.num_beams*self.num_bins, 3))
+        for beam in range(0, self.num_beams):
+            for rbin in range(0, self.num_bins):
+                row_idx = beam*self.num_bins + rbin
+                r = self.range(rbin)
+                a = self.azimuth(beam)
+                x = r*np.cos(a)
+                y = r*np.sin(a)
+                data[row_idx, 0] = x
+                data[row_idx, 1] = y
+                data[row_idx, 2] = ping[rbin, beam]
+        np.savetxt(filename, data, delimiter=',', newline='\n')
+
+    def range(self, rbin):
+        """
+        Returns the range (in meters) corresponding to the specified bin number
+        """
+        return self.min_range + rbin*((self.max_range - self.min_range)/self.num_bins)
+
     def azimuth(self, beam):
-        """Returns the azimuth angle (in radians) corresponding to the specified beam number."""
+        """
+        Returns the azimuth angle (in radians) corresponding to the specified beam number.
+        """
         return self.p_beam2azi(beam+0.0)
 
     def beam(self, azimuth):
@@ -153,7 +193,7 @@ class Sonar(object):
         """Compute lookup table used in polar to cartesian conversion"""
         # This function computes a look-up table of pairs (i,j), (k,l) to enable
         # fast conversion from polar to cartesian via vectorization of
-        # ping_cart[i, j] = polar_cart[k, l]
+        # ping_cart[i, j] = ping_polar[k, l]
         #
         # To do this, it computes two pairs of images
         # - Cartesian image indices (same shape as Cartesian image)
@@ -271,7 +311,7 @@ class Sonar(object):
 
     def deconvolve(self, ping):
         """
-        remove impulse response function from ping
+        Remove impulse response function from ping
         (derived from opencv's deconvolution sample)
         """
         assert ping.shape == (self.num_bins, self.num_beams)
@@ -337,6 +377,8 @@ class Sonar(object):
         """
         ping2 = np.copy(ping)
         # deconvolve
+        # remove taper
+        # remote attenuation
 
         return ping2
 
