@@ -203,7 +203,7 @@ def get_mixture(y, theta0=[0.3, 0.01, 0.03, 0.2], levels=2**8):
 
 def get_mixture_parameters(ping, p0=[0.32, 0.01, 0.03, 0.2],  levels=2**8):
     """
-    Computes the mixture model parameters.
+    Computes the mixture model parameters (DEPRECATED).
 
     Keyword arguments
     ping - the sonar image (0-1 range)
@@ -378,12 +378,13 @@ def segment_ping_map(ping):
     segmentation
     """
     # 1) extract model parameters
-    params, _ = get_mixture_parameters(ping)
+    # params, _ = get_mixture_parameters(ping)
+    _, _, theta, _ = get_mixture(ping)
 
     # 2) segment
-    scan = segment_map(ping, params[0], params[1], params[2], params[3])
+    scan = segment_map(ping, theta[0], theta[1], theta[2], theta[3])
 
-    return (scan, params)
+    return (scan, theta)
 
 
 # def segment_ping_mrf(ping,pi1, pi2, s1, s2):

@@ -356,6 +356,45 @@ class Sonar(object):
         # result[result>1.0] = 1.0
         return result.astype(ping.dtype)
 
+    def tvg(self, r, k1, k2, k3):
+        """
+        Compute time-varying gain
+        """
+        return k1*np.log10(r) + k2*r + k3 + 0.0
+
+    def remove_attenuation(self, ping, k=None):
+        """
+        remove attenuation effects
+        """
+        if k is None:
+            k = [0.25, 0.01375]
+
+        rng = np.linspace(self.min_range, self.max_range, self.num_bins)
+        gain = self.tvg(rng, k[0], k[1], 0.0)
+        gain /= gain[0]
+        gain = np.tile(gain, (ping.shape[1], 1))
+        ping_2 = np.multiply(gain.transpose(), ping)
+        # normalize image
+        ping_2 *= (np.amax(ping)/np.amax(ping_2))
+
+        return ping_2
+
+    def remove_taper(self, ping, k=None, normalize=True):
+        """
+        remove beam pattern taper effects
+        """
+        if k is None:
+            k = [3000, 0, -50, 0, 4, 0, 1]
+        p_ka = np.poly1d(k)
+        gain = p_ka(self.azimuths)
+        gain = np.tile(gain, (ping.shape[0], 1))
+        ping_2 = np.multiply(gain, ping)
+        if normalize:
+            ping_2 *= np.amax(ping)/np.amax(ping_2)
+
+        return ping_2
+
+
     def removeTaper(self, ping):
         """
         Remove taper effects from a scan.
