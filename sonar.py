@@ -82,11 +82,16 @@ class Sonar(object):
         with open(cfg_file) as sonar_config_file:
             cfg = json.load(sonar_config_file)
 
+            # lazy update: we should only update look-up table if the config has changed!
+            update_lut = False
+
             properties = ['min_range', 'max_range', 'fov', 'num_beams', 'num_bins', 'noise', 'rx_gain']
 
             for p in properties:
                 if p in cfg:
-                    setattr(self, p, cfg[p])
+                    if cfg[p] != getattr(self, p):
+                        update_lut = True
+                        setattr(self, p, cfg[p])
                 else:
                     logging.warning('property %s not found', p)
 
@@ -96,13 +101,16 @@ class Sonar(object):
                     self.psf = np.array(cfg['psf'])
                     self.psf.shape = (1, self.num_beams)
 
+            # DEPRECATED
             if 'taper' in cfg:
                 if cfg['taper'] != 1:
                     self.taper = np.array(cfg['taper'])
 
             if 'azimuths' in cfg:
                 azimuths = np.array(cfg['azimuths'])
-                self.__update_azimuths__(azimuths)
+                if np.any(azimuths != self.azimuths):
+                    update_lut = True
+                    self.__update_azimuths__(azimuths)
             else:
                 # we update the LINEAR mapping defined at initialization with the new parameters
                 self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
@@ -110,9 +118,11 @@ class Sonar(object):
                 self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
                 self.p_azi2beam = np.poly1d(self.k_a2b)
 
-            delta_r = (self.max_range-self.min_range)/(self.num_bins+0.0)
-            delta_r = min(delta_r, self.min_range*self.fov/(self.num_beams))
-            self.__compute_lookup__(delta_r)
+            if update_lut:
+                delta_r = (self.max_range-self.min_range)/(self.num_bins+0.0)
+                delta_r = min(delta_r, self.min_range*self.fov/(self.num_beams))
+
+                self.__compute_lookup__(delta_r)
 
     def save_config(self, cfg_file='sonar.json'):
         """
