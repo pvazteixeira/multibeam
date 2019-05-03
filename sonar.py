@@ -139,7 +139,7 @@ class Sonar(object):
 
         cfg['psf'] = np.squeeze(self.psf).tolist()
         cfg['azimuths'] = self.azimuths.tolist()
-        cfg['taper'] = self.taper.tolist()
+        # cfg['taper'] = self.taper.tolist()
 
         with open(cfg_file, 'w') as fp:
             json.dump(cfg, fp, sort_keys=True, indent=2)
@@ -201,6 +201,9 @@ class Sonar(object):
         self.p_beam2azi = np.poly1d(self.k_b2a)
         self.k_a2b = np.polyfit(azimuths, np.arange(0, self.num_beams)+0.0, 5)
         self.p_azi2beam = np.poly1d(self.k_a2b)
+
+        # update angular gain table
+
 
     def __compute_lookup__(self, resolution=0.01):
         """
@@ -265,17 +268,13 @@ class Sonar(object):
         row_polar -= self.min_range
         row_polar = np.around(row_polar/bin_length)
 
-        # cpoob = np.sum(col_polar < 0) + np.sum(col_polar >= self.num_beams)
-        # rpoob = np.sum(row_polar < 0) + np.sum(row_polar >= self.num_bins)
-        # logging.debug("Polar: %d out of %d elements out of bounds", cpoob+rpoob, width*height)
-
-        # ccoob = np.sum(col_cart < 0) + np.sum(col_cart >= height)
-        # rcoob = np.sum(row_cart < 0) + np.sum(row_cart >= width)
-        # logging.debug("Cartesian: %d out of %d elements out of bounds", ccoob+rcoob, width*height)
         # col_polar+=self.fov/2.0
         # col_polar = np.around(col_polar/beamwidth)
 
         # map all points outside the FOV to 0,0
+        # CONSIDER DELETING THESE ELEMENTS AND JUST PRE-ALLOCATING the output array
+        # ...or maybe the performance hit from deleting elements offsets the gain from
+        # reducing the number of look-ups?
         col_polar[row_polar < 0] = 0
         row_polar[col_polar < 0] = 0
         col_polar[col_polar < 0] = 0
@@ -389,13 +388,13 @@ class Sonar(object):
 
         return ping_2
 
-    def remove_taper(self, ping, k=None, normalize=True):
+    def remove_taper(self, ping, k_taper=None, normalize=False):
         """
         remove beam pattern taper effects
         """
-        if k is None:
-            k = [3000, 0, -50, 0, 4, 0, 1]
-        p_ka = np.poly1d(k)
+        if k_taper is None:
+            k_taper = [3000, 0, -50, 0, 4, 0, 1]
+        p_ka = np.poly1d(k_taper)
         gain = p_ka(self.azimuths)
         gain = np.tile(gain, (ping.shape[0], 1))
         ping_2 = np.multiply(gain, ping)
@@ -405,37 +404,38 @@ class Sonar(object):
         return ping_2
 
 
-    def removeTaper(self, ping):
-        """
-        Remove taper effects from a scan.
-        """
-        # TODO: revise!
-        taper = np.tile(self.taper, (ping.shape[0], 1))
-        ping2 = ping.astype(np.float64)
-        ping2 /= taper
+    # def removeTaper(self, ping):
+    #     """
+    #     Remove taper effects from a scan.
+    #     """
+    #     # TODO: revise!
+    #     taper = np.tile(self.taper, (ping.shape[0], 1))
+    #     ping2 = ping.astype(np.float64)
+    #     ping2 /= taper
 
-        ping2 = ping2 - ping2.min()
-        ping2 = (np.max(ping)/np.max(ping2))*ping2
-        #ping2*=((ping.max()+0.0)/ping2.max())
-        # if (ping2.max()>1.0 ):
-        #   # rescale if needed
-        #   ping2*=(1.0/ping2.max())
-        # ping2[ping2<0]=0
-        # ping2[ping2>1.0] = 1.0
+    #     ping2 = ping2 - ping2.min()
+    #     ping2 = (np.max(ping)/np.max(ping2))*ping2
+    #     #ping2*=((ping.max()+0.0)/ping2.max())
+    #     # if (ping2.max()>1.0 ):
+    #     #   # rescale if needed
+    #     #   ping2*=(1.0/ping2.max())
+    #     # ping2[ping2<0]=0
+    #     # ping2[ping2>1.0] = 1.0
 
-        return ping2
+    #     return ping2
 
-    def preprocess(self, ping):
+    def preprocess(self, ping_raw, renormalize=False):
         """
         Pre-process a ping. This entails removing beam-pattern effects, angular taper, and
         attenuation.
         """
-        ping2 = np.copy(ping)
-        # deconvolve
-        # remove taper
-        # remote attenuation
+        ping = np.copy(ping_raw)
 
-        return ping2
+        ping = self.remove_attenuation(ping)
+        ping = self.remove_taper(ping, normalize=renormalize)
+        ping = self.deconvolve(ping)
+
+        return ping
 
 
 ###################

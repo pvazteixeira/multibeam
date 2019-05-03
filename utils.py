@@ -501,17 +501,17 @@ def detect(ping, threshold=0.3):
     """
     Detect occupied beams (fixed threshold on energy).
     """
-    return (np.sum(np.power(ping,2),axis=0)>threshold)
+    return (np.sum(np.power(ping, 2), axis=0) > threshold)
 
 def annotate(ping, occupancy):
     """
     Annotate occupied beams in green, empty beams in red.
     """
-    ping_rgb = np.dstack((ping,ping,ping))
+    ping_rgb = np.dstack((ping, ping, ping))
     for i in range(0, len(occupancy)):
         ch = 0 # which channel to modify
         if occupancy[i]:
             ch = 1
-        ping_rgb[:,i,ch]/=np.amax(ping_rgb[:,i,ch] )
+        # max out the channel
+        ping_rgb[:, i, ch] /= np.amax(ping_rgb[:, i, ch] )
     return ping_rgb
-
