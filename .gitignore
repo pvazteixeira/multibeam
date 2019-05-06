@@ -90,8 +90,16 @@ ENV/
 
 # Output/test data
 ping.png
+dev/*.csv
+dev/*.json
+dev/output
+dev/cropped
 
-# exported figures
+# exported figures and movies
 dev/*.eps
+dev/*.mp4
 dev/*.pdf
+dev/*.pdf_tex
 dev/*.png
+dev/*.tex
+

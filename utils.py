@@ -8,6 +8,7 @@ from __future__ import division # integer division now yields floating-point num
 import numpy as np
 
 from scipy.optimize import curve_fit, minimize
+from scipy.signal import fftconvolve
 from scipy.stats import entropy, expon, norm, rayleigh, rice
 
 from skimage.io import imread
@@ -441,6 +442,8 @@ def em(y, theta0, epsilon=1e-2, max_iter = 100, levels=2**8):
     """
     estimate mixture model parameters via the EM algorithm
     Assumes an exponential+rayleigh mixture with a zero-bias.
+
+    DEPRECATED/UNTESTED
     """
     theta = np.copy(theta0)
     samples = np.copy(y.flatten())
@@ -497,6 +500,11 @@ def em(y, theta0, epsilon=1e-2, max_iter = 100, levels=2**8):
 
     return p_emp, p_mix, theta, div
 
+
+"""
+Sparse segmentation methods
+"""
+
 def detect(ping, threshold=0.3):
     """
     Detect occupied beams (fixed threshold on energy).
@@ -515,3 +523,134 @@ def annotate(ping, occupancy):
         # max out the channel
         ping_rgb[:, i, ch] /= np.amax(ping_rgb[:, i, ch] )
     return ping_rgb
+
+
+def correlate(ping, pulse):
+    """
+    Compute radial correlation in image (matched filter)
+    """
+    pulse.shape = (len(pulse), 1)
+    # q = correlate(ping, pulse, mode='full')
+    # scipy's fftconvolve is much faster than correlate
+    q_ping = fftconvolve(ping, pulse[::-1], mode='full') # 2ms
+    q_ping = np.copy(q_ping[(len(pulse)-1):, :])
+    return q_ping
+
+def segment_smap(ping, pulse, threshold=1.0):
+    """
+    Scan segmentation via per-beam matched filter.
+    """
+    q_ping = correlate(ping, pulse)
+    q_ping[q_ping < threshold] = 0
+    idx = np.argmax(q_ping, axis=0)
+    return idx
+
+# def smrf_obj(idx, q_ping, l=-1, bw=1.0):
+#     """
+#     Objective function for sparse mrf computation
+
+#     r: range estimate
+#     q_ping: correlation image
+#     l: exponential factor
+#     bw: binary factor weight
+
+#     TODO: handle non-contiguous vectors, or assume that is handled outside
+#     """
+#     # TODO: convert r to index
+#     idx = (r)
+#     u =  q_ping[idx, 0:len(r)] # unary cost: correlation at the given range
+#     b =  np.sum(np.exp(l*np.abs(np.diff(idx))))# binary cost:
+#     return u + bw*b
+
+# def segment_smrf(ping, pulse, threshold=1.0):
+#     q_ping = correlate(ping, pulse)
+#     q_ping[q_ping < threshold] = 0
+
+#     idx = np.argmax(q_ping, axis=0)
+
+#     result = minimize(smrf_obj, (q_ping))
+
+#     return result
+
+
+def compute_transition_energy(ping, r, l=-0.10):
+    """
+    Compute transition energy matrix for the current label assignment.
+    TODO: vectorize
+    """
+    bins, beams = ping.shape
+    T = np.zeros((bins, beams))
+    j = np.arange(bins)
+#     ones = np.ones(bins)
+    for i in range(beams):
+        if i > 0 and i < beams-1:
+            if (r[i] > 0) or (r[i-1] > 0 and r[i+1] > 0):
+                T[:, i] = 0
+
+                if r[i-1] > 0:
+                    T[:, i] = np.exp(l*np.abs(r[i-1]-j))
+                if r[i+1] > 0:
+                    T[:, i] += np.exp(l*np.abs(r[i+1]-j))
+        elif i == 0:
+            if r[0] > 0:
+                if r[1] > 0:
+                    T[:, i] = np.exp(l*np.abs(r[1]-j))
+                else:
+                    T[:, 0] = 0
+#                 for j in range(bins):
+#                     T[j,0] = (np.exp(l*abs(j-r[1])), 0)[r[1]==0]
+        else:
+            if r[i] > 0:
+                if r[i-1] > 0:
+                    T[:, i] = np.exp(l*np.abs(r[i-1]-j))
+                else:
+                    T[:, i] = 0.0
+    # this fixes single-beam gaps (double-nested for-loops)
+#     for i in range(beams):
+#         if i > 0 and i < beams-1:
+#             if (r[i]>0) or (r[i-1]>0 and r[i+1]>0):
+#                 for j in range(bins):
+#                     T[j,i] = (np.exp(l*abs(j-r[i-1])), 0)[r[i-1]==0] + (np.exp(l*abs(j-r[i+1])),0)[r[i+1]==0]
+#         elif i==0:
+#             if r[0]>0:
+#                 for j in range(bins):
+#                     T[j,0] = (np.exp(l*abs(j-r[1])), 0)[r[1]==0]
+#         else:
+#             if r[i]>0:
+#                 for j in range(bins):
+#                      T[j,i] = (np.exp(l*abs(j-r[i-1])),0)[r[i-1]==0]
+# this works, but there are still gaps
+#         if r[i]>0:
+#             # valid range measurement
+#             if i > 0 and i < beams-1:
+#                 for j in range(bins):
+#                     T[j,i] = (np.exp(l*abs(j-r[i-1])), 0)[r[i-1]==0] + (np.exp(l*abs(j-r[i+1])),0)[r[i+1]==0]
+#             elif i==0:
+#                 for j in range(bins):
+#                     T[j,0] = (np.exp(l*abs(j-r[1])), 0)[r[1]==0]
+#             else:
+#                 for j in range(bins):
+#                     T[j,i] = (np.exp(l*abs(j-r[i-1])),0)[r[i-1]==0]
+#         elif r[i+1] > 0 and r[i-1]>0:
+#             for j in range(bins):
+#                     T[j,i] = (np.exp(l*abs(j-r[i-1])), 0)[r[i-1]==0] + (np.exp(l*abs(j-r[i+1])),0)[r[i+1]==0]
+    return T
+
+def segment_smrf(ping, pulse, threshold=.40, iterations=10):
+    """
+    MRF segmentation through iterative maximization
+    """
+
+    Q = correlate(ping, pulse)
+    Q[Q < threshold] = 0
+
+    x0 = np.argmax(Q, axis=0) # local MAP solution as initialization
+    x = np.copy(x0)
+
+    for i in range(iterations):
+        T = compute_transition_energy(ping, x, (-0.10*(i+1))/iterations)
+        E = Q + T
+        x = np.argmax(E, axis=0)
+        # todo: check for convergence
+
+    return x0, x, E
