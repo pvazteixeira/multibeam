@@ -49,15 +49,17 @@ def background_pmf(x, pi_0, shape, levels=2**8):
     shape - the shape of the exponential pmf component
     levels - the size of the discrete interval (default: 256)
     """
-    prob = expon.pdf(x, loc=0, scale=shape) # background
-    prob /= np.sum(expon.pdf(np.linspace(0, 1, levels), loc=0, scale=shape))
-    prob *= pi_0
-    # check if scalar or array
-    if isinstance(prob, np.ndarray):
-        prob[np.argwhere(x <= (1.0/levels))] += (1-pi_0)
-    else:
-        if x < (1.0/levels):
-            prob += (1-pi_0)
+    # prob = expon.pdf(x, loc=0, scale=shape) # background
+    # prob /= np.sum(expon.pdf(np.linspace(0, 1, levels), loc=0, scale=shape))
+    # prob *= pi_0
+    # # check if scalar or array
+    # if isinstance(prob, np.ndarray):
+    #     prob[np.argwhere(x <= (1.0/levels))] += (1-pi_0)
+    # else:
+    #     if x < (1.0/levels):
+    #         prob += (1-pi_0)
+    prob = pi_0*exp_pmf(x, shape)
+    prob[x < 1.0/levels] += (1-pi_0)
 
     return prob
 
@@ -193,7 +195,7 @@ def get_mixture(y, theta0=[0.3, 0.01, 0.03, 0.2], levels=2**8):
     p_emp = hist[0][:].astype(np.float64)
     p_emp /= (np.sum(p_emp))
 
-    result = minimize(obj_fcn, theta0,( yv, p_emp))
+    result = minimize(obj_fcn, theta0, (yv, p_emp))
     theta = result.x
 
     p_mix = mixture_pmf(yv, theta[0], theta[1], theta[2], theta[3])
@@ -332,7 +334,9 @@ def compute_roc(pi1, pi2, s1, s2, levels=2**8):
 
 def likelihood(x, pi1, pi2, s_1, s_2, levels=2**8):
     """
+    evaluate likelihood 
 
+    TODO: replace w/ calls to object_pmf and background_pmf
     """
     pi0 = (1 - pi1 - pi2)
     pi0 /= (1-pi2)
