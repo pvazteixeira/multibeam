@@ -269,14 +269,16 @@ class Sonar(object):
         angle[angle < -np.pi] += 2*np.pi
 
         # ensure that min and max angle are not out of bounds
+        # NOTE: due to the use of the polynomial approximation to map between angle and beam, we run the risk of obtaining valid beam numbers for angles that are outside the sonar's field of view, as the polynomial approximation will be invalid in such regions. Therefore, we must get thes angles to just outside the FOV, where the approximation, despite not being valid, will not produce valid beam indices
+
         angle[angle < self.azimuths[0]] = self.azimuths[0]-0.1
         angle[angle > self.azimuths[-1]] = self.azimuths[-1]+0.1
 
         # reshape to the output image size
         mag.shape = (self.height, self.width)
         angle.shape = (self.height, self.width)
-        imsave('mag.png', mag)
-        imsave('angle.png', angle)
+        # imsave('mag.png', mag)
+        # imsave('angle.png', angle)
 
         # convert to beam index
         col_polar = self.p_azi2beam(angle).astype(int)
@@ -288,10 +290,10 @@ class Sonar(object):
         row_polar = np.around(row_polar/bin_length).astype(int)
 
         # DEBUG
-        imsave('col_polar_pre.png', col_polar)
-        imsave('row_polar_pre.png', row_polar)
-        imsave('col_cart_pre.png', col_cart)
-        imsave('row_cart_pre.png', row_cart)
+        # imsave('col_polar_pre.png', col_polar)
+        # imsave('row_polar_pre.png', row_polar)
+        # imsave('col_cart_pre.png', col_cart)
+        # imsave('row_cart_pre.png', row_cart)
 
         # map all points outside the FOV to 0,0
         # CONSIDER DELETING THESE ELEMENTS AND JUST PRE-ALLOCATING the output array
@@ -314,10 +316,10 @@ class Sonar(object):
         self.row_polar[row_polar >= self.num_bins] = 0
 
         # DEBUG
-        imsave('col_polar.png', self.col_polar)
-        imsave('row_polar.png', self.row_polar)
-        imsave('col_cart.png', self.col_cart)
-        imsave('row_cart.png', self.row_cart)
+        # imsave('col_polar.png', self.col_polar)
+        # imsave('row_polar.png', self.row_polar)
+        # imsave('col_cart.png', self.col_cart)
+        # imsave('row_cart.png', self.row_cart)
 
     def reset_window(self, min_range, max_range, resolution=0.01):
         """Reset the sonar window and recompute lookup table."""
