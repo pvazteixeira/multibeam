@@ -49,11 +49,11 @@ class Sonar(object):
         self.psf = np.ones((1, 1))
         self.taper = np.ones((self.num_beams))
 
-        self.noise = 0.1
+        self.noise = 0.01
         self.rx_gain = 0.0 # currently unused, but important to record
 
         # assume linear mapping between beam and azimuth angle
-        self.azimuths = []
+        self.azimuths = np.linspace(-self.fov/2.0,self.fov/2.0, self.num_beams)
         self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
         self.p_beam2azi = np.poly1d(self.k_b2a)
         self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
@@ -112,7 +112,7 @@ class Sonar(object):
                     update_lut = True
                     self.__update_azimuths__(azimuths)
             else:
-                # we update the LINEAR mapping defined at initialization with the new parameters
+                # update the current mapping with the new parameters
                 self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
                 self.p_beam2azi = np.poly1d(self.k_b2a)
                 self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
@@ -180,15 +180,24 @@ class Sonar(object):
         """
         return self.min_range + rbin*((self.max_range - self.min_range)/self.num_bins)
 
+
+    def bin(self, r):
+        """Return the range bin index corresponding to the specified range"""
+        dr = (self.max_range - self.min_range)/self.num_bins
+        return int( (r-self.min_range)/dr)
+
+
     def azimuth(self, beam):
         """
         Returns the azimuth angle (in radians) corresponding to the specified beam number.
         """
         return self.p_beam2azi(beam+0.0)
 
+
     def beam(self, azimuth):
         """Return the beam number corresponding to the specified azimuth angle (in radians)."""
         return int(np.round(self.p_azi2beam(azimuth)))
+
 
     def __update_azimuths__(self, azimuths):
         """Update the interpolating functions that compute the mapping between azimuth and beam from a table."""
@@ -228,15 +237,16 @@ class Sonar(object):
         # beamwidth = (self.fov)/(self.num_beams+0.0)
 
         #y0 = -self.max_range*np.sin(self.fov/2.0)
-        y1 = self.max_range*np.sin(self.fov/2.0)
-        width = np.around(2*y1/resolution)
-        yres = 2*y1/width  # resolution on y-axis, in m/px
+        y0 = self.max_range*np.sin(self.azimuths[0])
+        y1 = self.max_range*np.sin(self.azimuths[-1])
+        width = np.around((y1-y0)/resolution)
+        yres = (y1-y0)/(width+0.0) # resolution on y-axis, in m/px
         self.width = int(width)
 
-        x0 = self.min_range*np.cos(self.fov/2.0)
+        x0 = self.min_range*np.min(np.cos(self.azimuths[0]),np.cos(self.azimuths[-1]))
         x1 = self.max_range
         height = np.around((x1-x0)/resolution)
-        xres = (x1-x0)/height+0.0
+        xres = (x1-x0)/(height+0.0)
         self.height = int(height)
 
         logging.debug("Resolution: req=%f, x=%f, y=%f", resolution, xres, yres)
@@ -249,7 +259,7 @@ class Sonar(object):
         col_cart = np.arange(0, self.width)
         col_cart.shape = (1, self.width)
         col_cart = np.tile(col_cart, (self.height, 1))
-        y = -y1 + yres*col_cart
+        y = y0 + yres*col_cart
 
         # convert to range, azi
         (mag, angle) = cv2.cartToPolar(x.flatten(), y.flatten())
@@ -258,12 +268,19 @@ class Sonar(object):
         angle[angle > np.pi] -= 2*np.pi
         angle[angle < -np.pi] += 2*np.pi
 
+
+        # ensure that min and max angle are not out of bounds
+
+        # reshape to the output image size
         mag.shape = (self.height, self.width)
         angle.shape = (self.height, self.width)
 
+        # convert to beam index
         col_polar = self.p_azi2beam(angle)
         col_polar.shape = (self.height, self.width)
 
+
+        # convert to bin index
         row_polar = mag
         row_polar -= self.min_range
         row_polar = np.around(row_polar/bin_length)
