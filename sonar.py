@@ -401,12 +401,15 @@ class Sonar(object):
     def remove_attenuation(self, ping, k=None):
         """
         remove attenuation effects
+
+        Note: must 
         """
         if k is None:
             k = [0.25, 0.01375]
 
         rng = np.linspace(self.min_range, self.max_range, self.num_bins)
         gain = self.tvg(rng, k[0], k[1], 0.0)
+        gain[gain<1] = 1
         gain /= gain[0]
         gain = np.tile(gain, (ping.shape[1], 1))
         ping_2 = np.multiply(gain.transpose(), ping)
@@ -458,7 +461,7 @@ class Sonar(object):
         """
         ping = np.copy(ping_raw)
 
-        # ping = self.remove_attenuation(ping) # maybe broken?
+        ping = self.remove_attenuation(ping) # maybe broken?
         ping = self.remove_taper(ping, normalize=renormalize)
         ping = self.deconvolve(ping)
 

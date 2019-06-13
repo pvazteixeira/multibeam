@@ -528,6 +528,14 @@ def annotate(ping, occupancy):
         ping_rgb[:, i, ch] /= np.amax(ping_rgb[:, i, ch] )
     return ping_rgb
 
+def get_template(dr=9.0/512, l=-10.0):
+    """
+    Get template function for the pseudo match filter
+    """
+    r = np.arange(0, 1, dr)
+    pulse = np.exp(l*r)
+    return pulse
+
 
 def correlate(ping, pulse):
     """
@@ -543,11 +551,14 @@ def correlate(ping, pulse):
 def segment_smap(ping, pulse, threshold=1.0):
     """
     Scan segmentation via per-beam matched filter.
+
+    Empty beams will have idx = 0
     """
     q_ping = correlate(ping, pulse)
     q_ping[q_ping < threshold] = 0
     idx = np.argmax(q_ping, axis=0)
     return idx
+
 
 # def smrf_obj(idx, q_ping, l=-1, bw=1.0):
 #     """
