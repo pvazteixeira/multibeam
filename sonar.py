@@ -11,6 +11,8 @@ import json
 import logging
 import numpy as np
 
+from matplotlib.image import imsave
+
 # from skimage.io import imread, imsave
 
 import cv2
@@ -197,7 +199,7 @@ class Sonar(object):
 
     def beam(self, azimuth):
         """Return the beam number corresponding to the specified azimuth angle (in radians)."""
-        return int(np.round(self.p_azi2beam(azimuth)))
+        return (np.round(self.p_azi2beam(azimuth))).astype(int)
 
 
     def __update_azimuths__(self, azimuths):
@@ -207,11 +209,10 @@ class Sonar(object):
         # update FOV
         self.fov = np.amax(azimuths) - np.amin(azimuths)
         # update maps
-        self.k_b2a = np.polyfit(np.arange(0, self.num_beams), azimuths, 5)
+        self.k_b2a = np.polyfit(np.arange(0, self.num_beams)+0.0, azimuths, 5)
         self.p_beam2azi = np.poly1d(self.k_b2a)
         self.k_a2b = np.polyfit(azimuths, np.arange(0, self.num_beams)+0.0, 5)
         self.p_azi2beam = np.poly1d(self.k_a2b)
-
         # TODO: update angular gain table
 
 
@@ -236,19 +237,17 @@ class Sonar(object):
 
         bin_length = (self.max_range - self.min_range)/(self.num_bins + 0.0)
         # beamwidth = (self.fov)/(self.num_beams+0.0)
+        assert(self.azimuths[0]<self.azimuths[-1])
 
-        #y0 = -self.max_range*np.sin(self.fov/2.0)
         y0 = self.max_range*np.sin(self.azimuths[0])
         y1 = self.max_range*np.sin(self.azimuths[-1])
-        width = np.around((y1-y0)/resolution)
-        yres = (y1-y0)/(width+0.0) # resolution on y-axis, in m/px
-        self.width = int(width)
+        self.width = int(np.around((y1-y0)/resolution))
+        yres = (y1-y0)/(self.width+0.0) # resolution on y-axis, in m/px
 
-        x0 = self.min_range*np.min(np.cos(self.azimuths[0]),np.cos(self.azimuths[-1]))
+        x0 = self.min_range*np.min(np.cos(self.azimuths[0]), np.cos(self.azimuths[-1]))
         x1 = self.max_range
-        height = np.around((x1-x0)/resolution)
-        xres = (x1-x0)/(height+0.0) # resolution on x-axis, in m/px
-        self.height = int(height)
+        self.height = int(np.around((x1-x0)/resolution))
+        xres = (x1-x0)/(self.height+0.0) # resolution on x-axis, in m/px
 
         logging.debug("Resolution: req=%f, x=%f, y=%f", resolution, xres, yres)
 
@@ -269,49 +268,56 @@ class Sonar(object):
         angle[angle > np.pi] -= 2*np.pi
         angle[angle < -np.pi] += 2*np.pi
 
-
         # ensure that min and max angle are not out of bounds
+        angle[angle < self.azimuths[0]] = self.azimuths[0]-0.1
+        angle[angle > self.azimuths[-1]] = self.azimuths[-1]+0.1
 
         # reshape to the output image size
         mag.shape = (self.height, self.width)
         angle.shape = (self.height, self.width)
+        imsave('mag.png', mag)
+        imsave('angle.png', angle)
 
         # convert to beam index
-        col_polar = self.p_azi2beam(angle)
+        col_polar = self.p_azi2beam(angle).astype(int)
         col_polar.shape = (self.height, self.width)
 
         # convert to bin index
-        row_polar = mag
-        row_polar -= self.min_range
+        row_polar = np.copy(mag) - self.min_range
         # row_polar = self.range2bin(mag)
-        row_polar = np.around(row_polar/bin_length)
+        row_polar = np.around(row_polar/bin_length).astype(int)
 
-        # col_polar+=self.fov/2.0
-        # col_polar = np.around(col_polar/beamwidth)
+        # DEBUG
+        imsave('col_polar_pre.png', col_polar)
+        imsave('row_polar_pre.png', row_polar)
+        imsave('col_cart_pre.png', col_cart)
+        imsave('row_cart_pre.png', row_cart)
 
         # map all points outside the FOV to 0,0
         # CONSIDER DELETING THESE ELEMENTS AND JUST PRE-ALLOCATING the output array
         # ...or maybe the performance hit from deleting elements offsets the gain from
         # reducing the number of look-ups?
-        col_polar[row_polar < 0] = 0
-        row_polar[col_polar < 0] = 0
-        col_polar[col_polar < 0] = 0
-        row_polar[row_polar < 0] = 0
 
-        col_polar[row_polar >= self.num_bins] = 0
-        row_polar[col_polar >= self.num_beams] = 0
-        col_polar[col_polar >= self.num_beams] = 0
-        row_polar[row_polar >= self.num_bins] = 0
+        self.row_polar = np.copy(row_polar).astype(int)
+        self.col_polar = np.copy(col_polar).astype(int)
+        self.row_cart = np.copy(row_cart).astype(int)
+        self.col_cart = np.copy(col_cart).astype(int)
 
-        # col_polar[row_polar>=self.num_bins] = 0
-        # row_polar[col_polar>=self.num_beams] = 0
-        # row_polar[row_polar>=self.num_bins] = 0
-        # col_polar[col_polar>=self.num_beams] = 0
+        self.col_polar[row_polar < 0] = 0
+        self.row_polar[col_polar < 0] = 0
+        self.col_polar[col_polar < 0] = 0
+        self.row_polar[row_polar < 0] = 0
 
-        self.row_polar = row_polar.astype(int)
-        self.col_polar = col_polar.astype(int)
-        self.row_cart = row_cart.astype(int)
-        self.col_cart = col_cart.astype(int)
+        self.col_polar[row_polar >= self.num_bins] = 0
+        self.row_polar[col_polar >= self.num_beams] = 0
+        self.col_polar[col_polar >= self.num_beams] = 0
+        self.row_polar[row_polar >= self.num_bins] = 0
+
+        # DEBUG
+        imsave('col_polar.png', self.col_polar)
+        imsave('row_polar.png', self.row_polar)
+        imsave('col_cart.png', self.col_cart)
+        imsave('row_cart.png', self.row_cart)
 
     def reset_window(self, min_range, max_range, resolution=0.01):
         """Reset the sonar window and recompute lookup table."""
@@ -450,7 +456,7 @@ class Sonar(object):
         """
         ping = np.copy(ping_raw)
 
-        ping = self.remove_attenuation(ping)
+        # ping = self.remove_attenuation(ping) # maybe broken?
         ping = self.remove_taper(ping, normalize=renormalize)
         ping = self.deconvolve(ping)
 
