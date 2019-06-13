@@ -11,9 +11,9 @@ import json
 import logging
 import numpy as np
 
-import cv2
+# from skimage.io import imread, imsave
 
-from skimage.io import imread, imsave
+import cv2
 
 # logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -53,7 +53,7 @@ class Sonar(object):
         self.rx_gain = 0.0 # currently unused, but important to record
 
         # assume linear mapping between beam and azimuth angle
-        self.azimuths = np.linspace(-self.fov/2.0,self.fov/2.0, self.num_beams)
+        self.azimuths = np.linspace(-self.fov/2.0, self.fov/2.0, self.num_beams)
         self.k_b2a = [self.fov/(self.num_beams+0.0), -self.fov/2.0]
         self.p_beam2azi = np.poly1d(self.k_b2a)
         self.k_a2b = [self.num_beams/self.fov, self.num_beams/2.0]
@@ -119,6 +119,7 @@ class Sonar(object):
                 self.p_azi2beam = np.poly1d(self.k_a2b)
 
             if update_lut:
+                # delta_r is the smallest cartesian length of a pixel in the polar image
                 delta_r = (self.max_range-self.min_range)/(self.num_bins+0.0)
                 delta_r = min(delta_r, self.min_range*self.fov/(self.num_beams))
 
@@ -181,7 +182,7 @@ class Sonar(object):
         return self.min_range + rbin*((self.max_range - self.min_range)/self.num_bins)
 
 
-    def bin(self, r):
+    def range_to_bin(self, r):
         """Return the range bin index corresponding to the specified range"""
         dr = (self.max_range - self.min_range)/self.num_bins
         return int( (r-self.min_range)/dr)
@@ -211,7 +212,7 @@ class Sonar(object):
         self.k_a2b = np.polyfit(azimuths, np.arange(0, self.num_beams)+0.0, 5)
         self.p_azi2beam = np.poly1d(self.k_a2b)
 
-        # update angular gain table
+        # TODO: update angular gain table
 
 
     def __compute_lookup__(self, resolution=0.01):
@@ -246,7 +247,7 @@ class Sonar(object):
         x0 = self.min_range*np.min(np.cos(self.azimuths[0]),np.cos(self.azimuths[-1]))
         x1 = self.max_range
         height = np.around((x1-x0)/resolution)
-        xres = (x1-x0)/(height+0.0)
+        xres = (x1-x0)/(height+0.0) # resolution on x-axis, in m/px
         self.height = int(height)
 
         logging.debug("Resolution: req=%f, x=%f, y=%f", resolution, xres, yres)
@@ -279,10 +280,10 @@ class Sonar(object):
         col_polar = self.p_azi2beam(angle)
         col_polar.shape = (self.height, self.width)
 
-
         # convert to bin index
         row_polar = mag
         row_polar -= self.min_range
+        # row_polar = self.range2bin(mag)
         row_polar = np.around(row_polar/bin_length)
 
         # col_polar+=self.fov/2.0
@@ -335,9 +336,10 @@ class Sonar(object):
         0.02 m/px    2ms
         0.03 m/px    1ms
         """
+        pingc = np.copy(ping)
         image = np.zeros((self.height, self.width))
-        ping[0, 0] = background
-        image[self.row_cart.flatten(), self.col_cart.flatten()] = ping[self.row_polar.flatten(), self.col_polar.flatten()]
+        pingc[0, 0] = background
+        image[self.row_cart.flatten(), self.col_cart.flatten()] = pingc[self.row_polar.flatten(), self.col_polar.flatten()]
 
         return image
 
