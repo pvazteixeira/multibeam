@@ -244,7 +244,7 @@ class Sonar(object):
         self.width = int(np.around((y1-y0)/resolution))
         yres = (y1-y0)/(self.width+0.0) # resolution on y-axis, in m/px
 
-        x0 = self.min_range*np.min(np.cos(self.azimuths[0]), np.cos(self.azimuths[-1]))
+        x0 = self.min_range*min(np.cos(self.azimuths[0]), np.cos(self.azimuths[-1]))
         x1 = self.max_range
         self.height = int(np.around((x1-x0)/resolution))
         xres = (x1-x0)/(self.height+0.0) # resolution on x-axis, in m/px
