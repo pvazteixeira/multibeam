@@ -147,6 +147,26 @@ class Sonar(object):
         with open(cfg_file, 'w') as fp:
             json.dump(cfg, fp, sort_keys=True, indent=2)
 
+    def to_json(self, ping):
+        ping_dict = {}
+        ping_dict['max_range'] = self.max_range
+        ping_dict['min_range'] = self.min_range
+        ping_dict['fov'] = self.fov
+        ping_dict['num_beams'] = self.num_beams
+        ping_dict['num_bins'] = self.num_bins
+        ping_dict['noise'] = self.noise
+        ping_dict['rx_gain'] = self.rx_gain
+
+        ping_dict['psf'] = np.squeeze(self.psf).tolist()
+        ping_dict['azimuths'] = self.azimuths.tolist()
+
+        ping_dict['beams'] = {}
+        for i in range(0, self.num_beams):
+            ping_dict['beams'][str(i)] = np.squeeze(ping[:, i]).tolist()
+
+        return ping_dict
+
+
     def to_csv_polar(self, filename, ping):
         """
         Export the ping as a csv file.
