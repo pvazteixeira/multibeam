@@ -559,6 +559,15 @@ def segment_smap(ping, pulse, threshold=1.0):
     idx = np.argmax(q_ping, axis=0)
     return idx
 
+def reconstruct(ping, ranges):
+    """
+    reconstruct the image from the range measurements
+    """
+    ping2 = np.zeros_like(ping)
+    for i in range(0, len(ranges)):
+        if ranges[i]>0:
+            ping2[ranges[i],i] = 1.0
+    return ping2
 
 # def smrf_obj(idx, q_ping, l=-1, bw=1.0):
 #     """
