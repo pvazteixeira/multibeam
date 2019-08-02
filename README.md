@@ -1,16 +1,17 @@
 # multibeam
 
+![Example scan (left to right): original, pre-processed, MAP classification](https://raw.githubusercontent.com/pvazteixeira/multibeam/feature/mrf/images/scans.png)
+
 A simple Python module to handle multibeam sonar images.
 
-## getting started
+Features:
+ * polar to Cartesian conversion 
+ * support for non-linear mappings between beam number and bearing angle
+ * background and object intensity distribution estimation
+ * MAP segmentation
 
-The key functionalities in this library are demonstrated in the notebook `examples/demo.ipynb`
+## dependencies
 
-## contribute
-Contributions are very welcome - feel free to create issues or open pull requests.
-
-## references
-
- * P.V. Teixeira, M. Kaess, F. Hover, J. Leonard "Multibeam Data Processing for Underwater Mapping" 2018 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)
-
-
+* [numpy]() - general-purpose array manipulation
+* [opencv]() - image processing
+* [scipy]() -
