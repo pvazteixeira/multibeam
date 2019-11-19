@@ -544,4 +544,3 @@ def getReturns(self, segmented_ping):
 
     # (x,y) = cv2.polarToCart()
     return positions
-'''
