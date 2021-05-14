@@ -14,9 +14,9 @@ Features:
 
 The main dependencies for this module are:
 
-* [numpy]() - general-purpose array manipulation
-* [opencv]() - image processing
-* [scipy]() -
+* [numpy](https://numpy.org) - general-purpose array manipulation
+* [opencv](https://opencv.org) - image processing
+* [scipy](https://www.scipy.org)
 
 The `environment.yml` file contains the [conda](http://conda.io) environment specification for this package. 
 
