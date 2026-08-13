@@ -89,19 +89,14 @@ ENV/
 .ropeproject
 
 # Output/test data
-ping.png
-dev/*.csv
-dev/*.json
-dev/output
-dev/cropped
-
-# exported figures and movies
-dev/*.eps
-dev/*.mp4
-dev/*.pdf
-dev/*.pdf_tex
-dev/*.png
-dev/*.tex
+**/*.csv
+**/*.eps
+**/*.json
+**/*.mp4
+**/*.pdf
+**/*.pdf_tex
+**/*.png
+**/*.tex
 
 # pixi environments
 .pixi/*
