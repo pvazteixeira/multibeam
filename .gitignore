@@ -103,3 +103,6 @@ dev/*.pdf_tex
 dev/*.png
 dev/*.tex
 
+# pixi environments
+.pixi/*
+!.pixi/config.toml

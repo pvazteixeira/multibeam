@@ -3,17 +3,13 @@ Useful functions for sonar segmentation.
 
 See also: teixeira2018multibeam (IROS 2018)
 """
-from __future__ import division # integer division now yields floating-point numbers
 
 import numpy as np
 
 from scipy.optimize import curve_fit, minimize
 from scipy.signal import fftconvolve
 from scipy.stats import entropy, expon, norm, rayleigh, rice
-
 from skimage.io import imread
-
-
 
 
 """
@@ -58,8 +54,8 @@ def background_pmf(x, pi_0, shape, levels=2**8):
     # else:
     #     if x < (1.0/levels):
     #         prob += (1-pi_0)
-    prob = pi_0*exp_pmf(x, shape)
-    prob[x < 1.0/levels] += (1-pi_0)
+    prob = pi_0 * exp_pmf(x, shape)
+    prob[x < 1.0 / levels] += (1 - pi_0)
 
     return prob
 
@@ -78,14 +74,12 @@ def exp_pmf(x, shape, levels=2**8):
 
 
 def ray_pmf(x, shape, levels=2**8):
-    """
-    Evaluate the object probability mass function
+    """Evaluate the object probability mass function.
 
-    x - where to evaluate the pmf
-    shape - the shape of the pmf
-    levels - the size of the discrete interval (default: 256)
+    :param x:  where to evaluate the pmf
+    :param shape: the shape of the pmf
+    :param levels:  the size of the discrete interval (default: 256)
     """
-
     prob = rayleigh.pdf(x, 0, shape)
     prob /= np.sum(rayleigh.pdf(np.linspace(0, 1, levels), 0, shape))
 
@@ -102,8 +96,7 @@ def norm_pmf(x, loc, scale, levels=2**8):
     return prob
 
 def object_pmf(x, shape, levels=2**8):
-    """
-    Evaluate the object probability mass function
+    """Evaluate the object probability mass function
 
     x - where to evaluate the pmf
     shape - the shape of the pmf
@@ -113,8 +106,7 @@ def object_pmf(x, shape, levels=2**8):
 
 
 def rice_pmf(x, dist, shape, levels=2**8):
-    """
-    Evaluate the object probability mass function
+    """Evaluate the object probability mass function
 
     x - where to evaluate the pmf
     shape - the shape of the pmf
@@ -128,8 +120,7 @@ def rice_pmf(x, dist, shape, levels=2**8):
 
 
 def mixture_pmf(x, pi_bg, pi_obj, s_bg, s_obj, levels=2**8):
-    """
-    Evaluate the mixture model probability mass function:
+    """Evaluate the mixture model probability mass function:
 
     (1-pi_bg-pi_obj)*delta(x) + pi_bg*exponential(x,s_bg) + pi_obj*rayleigh(x,s_obj)
 
@@ -180,15 +171,17 @@ def obj_fcn(theta, y, p_y):
     return entropy(p_y, p_mix)
 
 def get_mixture(y, theta0=[0.3, 0.01, 0.03, 0.2], levels=2**8):
-    """
-    Estimate mixture model parameters through least squares.
+    """Estimate mixture model parameters through least squares.
+
+    :param y:
+    :param theta0:
+    :param levels:
     """
 
     theta = np.copy(theta0)
     samples = np.copy(y.flatten())
 
     bins = np.linspace(0, 1.0, levels+1)
-    # k = np.linspace(0, 1.0, levels)
 
     hist = np.histogram(samples, bins)
     yv = hist[1][:-1].astype(np.float64)
@@ -205,8 +198,7 @@ def get_mixture(y, theta0=[0.3, 0.01, 0.03, 0.2], levels=2**8):
     return p_emp, p_mix, theta, div
 
 def get_mixture_parameters(ping, p0=[0.32, 0.01, 0.03, 0.2],  levels=2**8):
-    """
-    Computes the mixture model parameters (DEPRECATED).
+    """Compute the mixture model parameters (DEPRECATED).
 
     Keyword arguments
     ping - the sonar image (0-1 range)

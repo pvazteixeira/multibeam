@@ -1,9 +1,10 @@
 """
 Specialization of multibeam.sonar to handle DIDSON sonars.
 """
-import numpy as np
 import cv2
-from sonar import Sonar
+import numpy as np
+
+from .sonar import Sonar
 
 class Didson(Sonar):
     """
@@ -14,7 +15,7 @@ class Didson(Sonar):
         """
         Compute lookup table used in polar to cartesian conversion
         """
-        bin_length = (self.max_range - self.min_range)/(self.num_bins + 0.0)
+        bin_length = (self.max_range - self.min_range)/(self.num_bins)
         # beamwidth = (self.fov)/(self.num_beams+0.0)
 
         y_0 = self.max_range*np.sin(self.fov/2.0)

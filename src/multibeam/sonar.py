@@ -9,21 +9,16 @@ See also: [teixeira2018multibeam].
 
 import json
 import logging
-import numpy as np
-
-from matplotlib.image import imsave
-
-# from skimage.io import imread, imsave
 
 import cv2
+import numpy as np
+from matplotlib.image import imsave
 
-# logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 class Sonar(object):
     # pylint: disable=too-few-public-methods
     # pylint: disable=too-many-instance-attributes
-    """
-    A class to handle pre-processing of multibeam sonar data.
+    """A class to handle pre-processing of multibeam sonar data.
 
     Pings are assumed to be R rows by B columns, corresponding to the data in
     polar coordinates, where the first row is closest to the sonar, and azimuth
@@ -70,17 +65,20 @@ class Sonar(object):
 
         self.__compute_lookup__(0.01)
 
-    def print_config(self):
+    def print_config(self) -> None:
         """Print the sonar configuration."""
-        print 'Range:', self.min_range, '-', self.max_range
-        print 'FOV:', self.fov
-        print 'Beams:', self.num_beams
-        print 'Bins:', self.num_bins
-        print '1/SNR:', self.noise
-        print 'Rx gain:', self.rx_gain
+        print(f"Range: {self.min_range:.3f} - {self.max_range:.3f}")
+        print(f"FOV: {self.fov}")
+        print(f"Beams: {self.num_beams}")
+        print(f"Bins:{self.num_bins}")
+        print(f"1/SNR: {self.noise}")
+        print(f"Rx gain: {self.rx_gain}")
 
-    def load_config(self, cfg_file='sonar.json'):
-        """Load the sonar configuration from file."""
+    def load_config(self, cfg_file: str='sonar.json'):
+        """Load the sonar configuration from file.
+
+        :param cfg_file: Path to config file
+        """
         with open(cfg_file) as sonar_config_file:
             cfg = json.load(sonar_config_file)
 
@@ -98,7 +96,6 @@ class Sonar(object):
                     logging.warning('property %s not found', p)
 
             if 'psf' in cfg:
-                #if len(cfg['psf']) == self.num_beams:
                 if cfg['psf'] != 1:
                     self.psf = np.array(cfg['psf'])
                     self.psf.shape = (1, self.num_beams)
@@ -127,9 +124,10 @@ class Sonar(object):
 
                 self.__compute_lookup__(delta_r)
 
-    def save_config(self, cfg_file='sonar.json'):
-        """
-        Save the ping/sonar parameters to a JSON file.
+    def save_config(self, cfg_file: str='sonar.json'):
+        """Save the ping/sonar parameters to a JSON file.
+
+        :param cfg_file: Path to config file
         """
         cfg = {}
         cfg['max_range'] = self.max_range
@@ -148,6 +146,9 @@ class Sonar(object):
             json.dump(cfg, fp, sort_keys=True, indent=2)
 
     def to_json(self, ping):
+        """
+            
+        """
         ping_dict = {}
         ping_dict['max_range'] = self.max_range
         ping_dict['min_range'] = self.min_range
@@ -168,10 +169,10 @@ class Sonar(object):
 
 
     def to_csv_polar(self, filename, ping):
+        """Export the ping as a csv file.
+
         """
-        Export the ping as a csv file.
-        """
-        data = np.zeros((self.num_beams*self.num_bins, 3))
+        data = np.zeros((self.num_beams * self.num_bins, 3))
         for beam in range(0, self.num_beams):
             for rbin in range(0, self.num_bins):
                 row_idx = beam*self.num_bins + rbin
@@ -181,8 +182,10 @@ class Sonar(object):
         np.savetxt(filename, data, delimiter=',', newline='\n')
 
     def to_csv_cart(self, filename, ping):
-        """
-        Export the ping as a csv file.
+        """Export the ping as a csv file.
+
+        :param filename:
+        :param ping:
         """
         data = np.zeros((self.num_beams*self.num_bins, 3))
         for beam in range(0, self.num_beams):
@@ -197,32 +200,33 @@ class Sonar(object):
                 data[row_idx, 2] = ping[rbin, beam]
         np.savetxt(filename, data, delimiter=',', newline='\n')
 
-    def range(self, rbin):
-        """
-        Returns the range (in meters) corresponding to the specified bin number
+    def range(self, rbin: int) -> float:
+        """Returns the range (in meters) corresponding to the specified bin number.
         """
         return self.min_range + rbin*((self.max_range - self.min_range)/self.num_bins)
 
 
-    def range_to_bin(self, r):
-        """Return the range bin index corresponding to the specified range"""
+    def range_to_bin(self, r: float) -> int:
+        """Return the range bin index corresponding to the specified range.
+
+        """
         dr = (self.max_range - self.min_range)/self.num_bins
         return int( (r-self.min_range)/dr)
 
 
-    def azimuth(self, beam):
+    def azimuth(self, beam: int) -> float:
         """
         Returns the azimuth angle (in radians) corresponding to the specified beam number.
         """
-        return self.p_beam2azi(beam+0.0)
+        return self.p_beam2azi(beam + 0.)
 
 
-    def beam(self, azimuth):
+    def beam(self, azimuth: float) -> int:
         """Return the beam number corresponding to the specified azimuth angle (in radians)."""
         return (np.round(self.p_azi2beam(azimuth))).astype(int)
 
 
-    def __update_azimuths__(self, azimuths):
+    def __update_azimuths__(self, azimuths) -> None:
         """Update the interpolating functions that compute the mapping between azimuth and beam from a table."""
         assert len(azimuths) == self.num_beams
         self.azimuths = azimuths
@@ -236,9 +240,8 @@ class Sonar(object):
         # TODO: update angular gain table
 
 
-    def __compute_lookup__(self, resolution=0.01):
-        """
-        Compute lookup table used in polar to cartesian conversion
+    def __compute_lookup__(self, resolution: float=0.01) -> None:
+        """Compute lookup table used in polar to cartesian conversion.
         """
         # This function computes a look-up table of pairs (i,j), (k,l) to enable
         # fast conversion from polar to cartesian via vectorization of
@@ -350,12 +353,12 @@ class Sonar(object):
 
         # currently, width is being ignored!
         # should actually take resolution [m/px] as argument
+         
     def to_cart(self, ping, background=0.0):
         """Convert sonar scan from polar to Cartesian
 
-        Keyword arguments:
-        ping - the sonar scan, in polar representation
-        width - the desired with of the Cartesian representation (default: 320)
+        :param ping:  the sonar scan, in polar representation
+
         Note: some conversion performance values as a function of resolution:
         Sample results for 96 beams * 512 bins, 28.8deg FOV, 2.25-11.25m
         resolution | conversion time
@@ -371,8 +374,7 @@ class Sonar(object):
         return image
 
     def deconvolve(self, ping):
-        """
-        Remove impulse response function from ping
+        """Remove impulse response function from ping
         (derived from opencv's deconvolution sample)
         """
         assert ping.shape == (self.num_bins, self.num_beams)
@@ -411,17 +413,21 @@ class Sonar(object):
         # result[result>1.0] = 1.0
         return result.astype(ping.dtype)
 
-    def tvg(self, r, k1, k2, k3):
+    def tvg(self, r, k1: float, k2: float, k3: float):
+        """Compute time-varying gain.
+
+        :param r:
+        :param k1
+        :param k2:
+        :param k3:
         """
-        Compute time-varying gain
-        """
-        return k1*np.log10(r) + k2*r + k3 + 0.0
+
+        return k1 * np.log10(r) + k2 * r + k3
 
     def remove_attenuation(self, ping, k=None):
         """
         remove attenuation effects
 
-        Note: must 
         """
         if k is None:
             k = [0.25, 0.01375]
